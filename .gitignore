@@ -1,0 +1,42 @@
+# Ambientes Virtuais (Python)
+.venv/
+venv/
+.env/
+env/
+bin/
+lib/
+share/
+
+# Cache do Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Banco de Dados (SQLite)
+# Recomendado não versionar o arquivo de dados real, apenas os scripts SQL
+*.sqlite
+*.sqlite3
+*.db
+data/database.db
+
+# Uploads e Assets Dinâmicos
+# Ignoramos as fotos reais enviadas, mas mantemos a pasta via arquivo .gitkeep
+assets/uploads/*
+!assets/uploads/.gitkeep
+
+# Configurações de Ambiente (Sensível)
+.env
+
+# Streamlit e Logs
+.streamlit/
+*.log
+
+# Editor de Código (VS Code)
+.vscode/
+.history/
+
+# Sistema Operacional (Windows/Mac)
+Thumbs.db
+desktop.ini
+.DS_Store

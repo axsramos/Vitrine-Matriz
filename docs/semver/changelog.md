@@ -1,5 +1,6 @@
 # Vitrine-Matriz
-Geração de Release Notes e Portfólio Profissional
+**Portal de Transparência, Performance e Gestão de Releases.**
+
 Voltar para [README](/README.md)
 
 # Changelog
@@ -34,6 +35,14 @@ Segurança: Em caso de vulnerabilidades.
 
 ---
 
-## [0.0.1](./v0.0.1/whatsnew.md) - 11/01/2027 
-### <tag>
+## [0.1.0](./v0.1.0/whatsnew.md) - 11/01/2027 
+### Geração de Release Notes e Portfólio Profissional
 - <description>
+- **Dashboard Estratégico:** Visão geral de entregas, releases e roadmap futuro.
+- **Portfólio da Equipe:** Perfis detalhados com fotos, biografia e histórico de entregas.
+- **Gestão de Releases:** Agrupamento de tarefas em versões oficiais com títulos comunicativos.
+- **Lançamento de Tarefas:** Cadastro manual de entregas (contingência) com foco no **Impacto de Negócio**.
+- **Relatórios em PDF:** Geração automática de Notas de Versão e Relatórios de Performance da Equipe (Consolidado).
+- **Backlog Dinâmico:** Roadmap de desenvolvimento lido diretamente de arquivos Markdown.
+
+---
