@@ -1,10 +1,10 @@
 import streamlit as st
 import os
 from src.services.dev_service import DevService
-from src.core.config import get_page
+from src.core import config
+from src.core.ui_utils import init_page
 
-# Configuração da Página
-st.set_page_config(page_title="Portfólio da Equipe - Vitrine Matriz", layout="wide")
+init_page("Portfólio da Equipe", "wide")
 
 # Estilização CSS Customizada (Cards)
 st.markdown("""
@@ -80,7 +80,7 @@ else:
                 if st.button(f"Ver Trajetória de {row['nome'].split()[0]}", key=f"btn_{row['id']}", use_container_width=True):
                     # Usamos session_state para garantir a passagem imediata do ID
                     st.session_state["selected_dev_id"] = row['id']
-                    st.switch_page(get_page("04_Detalhes_Dev.py"))
+                    st.switch_page(config.get_page("04_Detalhes_Dev.py"))
 
 st.markdown("---")
-st.caption("Dados gerados a partir do cruzamento de metadados do Vitrine Matriz e Bitrix24.")
+st.caption(f"Dados gerados a partir do cruzamento de metadados do { config.APP_TITLE } e Bitrix24.")

@@ -35,9 +35,8 @@ Segurança: Em caso de vulnerabilidades.
 
 ---
 
-## [0.1.0](./v0.1.0/whatsnew.md) - 11/01/2027 
+## [0.1.0](./v0.1.0/whatsnew.md) - 11/01/2026 
 ### Geração de Release Notes e Portfólio Profissional
-- <description>
 - **Dashboard Estratégico:** Visão geral de entregas, releases e roadmap futuro.
 - **Portfólio da Equipe:** Perfis detalhados com fotos, biografia e histórico de entregas.
 - **Gestão de Releases:** Agrupamento de tarefas em versões oficiais com títulos comunicativos.
@@ -45,4 +44,9 @@ Segurança: Em caso de vulnerabilidades.
 - **Relatórios em PDF:** Geração automática de Notas de Versão e Relatórios de Performance da Equipe (Consolidado).
 - **Backlog Dinâmico:** Roadmap de desenvolvimento lido diretamente de arquivos Markdown.
 
----
+## [0.2.0](./v0.2.0/whatsnew.md) - 14/01/2026 
+### Segurança e Acesso
+- **Sistema de Autenticação:** Implementação de tela de login integrada ao banco de dados SQLite.
+- **Gestão de Usuários (CRUD):** Interface administrativa para cadastrar, visualizar e remover operadores do sistema.
+- **Self-Service de Senha:** Funcionalidade que permite ao usuário logado alterar sua própria senha de acesso.
+- **Menu Dinâmico:** O menu lateral agora se adapta ao perfil do usuário (Logado vs. Visitante), exibindo apenas as opções permitidas.

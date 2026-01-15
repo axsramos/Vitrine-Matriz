@@ -3,6 +3,8 @@ import os
 from dotenv import load_dotenv
 
 load_dotenv()
+# BASE_DIR = Path(__file__).resolve().parent.parent.parent
+# DB_PATH_DEFAULT = os.path.join(BASE_DIR, "data", "database.db")
 DB_PATH = os.getenv("DB_PATH", "data/database.db")
 
 def get_connection():

@@ -1,12 +1,20 @@
 import streamlit as st
 from pathlib import Path
-from src.core.config import get_page
+from src.core import config
 from src.services.dashboard_service import DashboardService
 from src.services.release_service import ReleaseService
+from src.services.auth_service import AuthService
+from src.core.ui_utils import init_page
+
+init_page("Login", "wide")
+
+if "authenticated" not in st.session_state:
+    st.session_state.authenticated = False
+    st.session_state.user = None
 
 def home():
-    st.title("🚀 Vitrine Matriz")
-    st.subheader("Portal de Transparência e Performance")
+    st.title(config.APP_TITLE)
+    st.subheader(config.APP_SUBTITLE)
     
     dash_service = DashboardService()
     rel_service = ReleaseService()
@@ -64,28 +72,60 @@ def home():
     st.divider()
     
     st.caption("Versão 1.0.0-beta | Desenvolvido para gestão estratégica do Portal Matriz.")
-    
-    
-# Configuração da página
-st.set_page_config(page_title="Vitrine Matriz", page_icon="🖼️", layout="wide")
 
-# Atualizamos os caminhos adicionando 'src/' na frente
-pages = {
-    "Menu Principal": [
-        st.Page(home, title="Boas-vindas", icon="🏠", default=True),
-    ],
-    "Gerenciamento": [
-        st.Page(get_page("01_Gerar_Release.py"), title="Gerar Release", icon="📦"),
-        st.Page(get_page("06_Cadastrar_Tarefa.py"), title="Cadastrar Tarefa", icon="➕"),
-        st.Page(get_page("05_Gerenciar_Perfil.py"), title="Gerenciar Perfis", icon="⚙️"),
-    ],
-    "Visualização": [
-        st.Page(get_page("02_Notas_de_Versao.py"), title="Notas de Versão", icon="🗒️"),
-        st.Page(get_page("03_Portfolio_Equipe.py"), title="Portfólio Equipe", icon="👥"),
-        st.Page(get_page("04_Detalhes_Dev.py"), title="Detalhes do Dev", icon="👤"),
-        st.Page(get_page("07_Relatorios.py"), title="Relatórios PDF", icon="📄"),
+def login_page():
+    # Centralizando o formulário na tela
+    col1, col2, col3 = st.columns([1, 2, 1])
+    
+    with col2:
+        with st.form("login_form"):
+            st.write("### Identifique-se")
+            user_input = st.text_input("Usuário")
+            pass_input = st.text_input("Senha", type="password")
+            submit = st.form_submit_button("Entrar", use_container_width=True)
+            
+            if submit:
+                auth = AuthService()
+                user = auth.check_login(user_input, pass_input)
+                if user:
+                    st.session_state.authenticated = True
+                    st.session_state.user = user
+                    st.success("Login realizado!")
+                    st.rerun()
+                else:
+                    st.error("Credenciais inválidas.")
+
+def logout():
+    st.session_state.authenticated = False
+    st.session_state.user = None
+    st.rerun()
+
+pages = {}
+
+public_list = [
+    st.Page("src/ui/pages/02_Notas_de_Versao.py", title="Notas de Versão", icon="🗒️"),
+    st.Page("src/ui/pages/03_Portfolio_Equipe.py", title="Portfólio Equipe", icon="👥")
+]
+
+if st.session_state.authenticated:
+    pages["Dashboard"] = [st.Page(home, title="Home", icon="🏠")]
+    pages["Consulta"] = public_list
+    pages["Gerenciamento"] = [
+        st.Page("src/ui/pages/01_Gerar_Release.py", title="Gerar Release", icon="📦"),
+        st.Page("src/ui/pages/06_Cadastrar_Tarefa.py", title="Cadastrar Tarefa", icon="➕"),
+        st.Page("src/ui/pages/07_Relatorios.py", title="Relatórios PDF", icon="📄"),
+        st.Page("src/ui/pages/08_Gerenciar_Usuarios.py", title="Gerenciar Usuários", icon="👥")
     ]
-}
+    pages["Conta"] = [
+        st.Page("src/ui/pages/09_Alterar_Senha.py", title="Alterar Senha", icon="🔑"),
+        st.Page(logout, title="Sair", icon="🚪")
+    ]
+else:
+    pages["Início"] = [st.Page(home, title="Boas-vindas", icon="🏠")]
+    pages["Consulta Pública"] = public_list
+    pages["Admin"] = [st.Page(login_page, title="Login", icon="🔐")]
 
+# 4. Execução da Navegação
 pg = st.navigation(pages)
 pg.run()
+

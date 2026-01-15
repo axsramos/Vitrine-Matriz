@@ -2,8 +2,13 @@ import streamlit as st
 from src.services.tarefa_service import TarefaService
 from src.models.release import Release
 from src.models.tarefa import Tarefa
+from src.core import config
+from src.core.auth_middleware import require_auth
+from src.core.ui_utils import init_page
 
-st.set_page_config(page_title="Gerar Release - Vitrine Matriz", layout="wide")
+require_auth()
+
+init_page("Gerar Release", "wide")
 
 st.title("📦 Gerar / Atualizar Release")
 

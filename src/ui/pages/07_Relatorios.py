@@ -3,9 +3,14 @@ from datetime import datetime
 from src.services.release_service import ReleaseService
 from src.services.dev_service import DevService
 from src.services.report_service import ReportService
+from src.core import config
+from src.core.auth_middleware import require_auth
+from src.core.ui_utils import init_page
 
-st.set_page_config(page_title="Relatórios - Vitrine Matriz", layout="centered")
+require_auth()
 
+init_page("Relatórios", "centered")
+    
 st.title("📄 Exportação de Relatórios")
 report_service = ReportService()
 

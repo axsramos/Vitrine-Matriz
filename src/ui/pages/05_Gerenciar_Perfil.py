@@ -2,7 +2,14 @@ import streamlit as st
 import os
 from src.models.desenvolvedor import Desenvolvedor
 from src.services.dev_service import DevService
+from src.core import config
+from src.core.auth_middleware import require_auth
+from src.core.ui_utils import init_page
 
+require_auth()
+
+init_page("Gerenciar Perfil", "centered")
+    
 def save_photo(uploaded_file, dev_id):
     """Encapsula a lógica de salvar o arquivo no disco."""
     upload_dir = "assets/uploads"
@@ -19,8 +26,6 @@ def save_photo(uploaded_file, dev_id):
         f.write(uploaded_file.getbuffer())
     
     return file_path
-
-st.set_page_config(page_title="Gerenciar Perfil - Vitrine Matriz", layout="centered")
 
 st.title("⚙️ Gerenciar Perfil")
 

@@ -4,6 +4,10 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+# Configurações de UI
+APP_TITLE = os.getenv("APP_TITLE", "Vitrine Matriz")
+APP_SUBTITLE = os.getenv("APP_SUBTITLE", "Portal de Transparência")
+
 # Caminho base do projeto (onde está o app.py)
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
 

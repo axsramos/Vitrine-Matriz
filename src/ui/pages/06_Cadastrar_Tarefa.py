@@ -2,9 +2,14 @@ import streamlit as st
 from src.models.tarefa import Tarefa
 from src.services.dev_service import DevService
 from src.services.release_service import ReleaseService
+from src.core import config
+from src.core.auth_middleware import require_auth
+from src.core.ui_utils import init_page
 
-st.set_page_config(page_title="Lançamento de Tarefas - Vitrine Matriz", layout="centered")
+require_auth()
 
+init_page("Lançamento de Tarefas", "centered")
+    
 st.title("➕ Lançamento de Tarefas")
 st.markdown("Utilize este formulário para registrar entregas de forma manual ou em regime de contingência.")
 

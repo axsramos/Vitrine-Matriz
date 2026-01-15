@@ -1,7 +1,9 @@
 import streamlit as st
 from src.services.release_service import ReleaseService
+from src.core import config
+from src.core.ui_utils import init_page
 
-st.set_page_config(page_title="Notas de Versão - Portal Matriz", layout="centered")
+init_page("Notas de Versão", "centered")
 
 st.title("🗒️ Notas de Versão")
 st.markdown("---")
