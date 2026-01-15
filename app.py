@@ -1,4 +1,6 @@
 import streamlit as st
+import plotly.express as px
+from datetime import datetime, timedelta
 from pathlib import Path
 from src.core import config
 from src.services.dashboard_service import DashboardService
@@ -18,9 +20,23 @@ def home():
     
     dash_service = DashboardService()
     rel_service = ReleaseService()
-    stats = dash_service.get_summary_stats()
+
+    # 1. Interface de Filtros
+    st.markdown("### 📅 Filtros de Análise")
+    col_f1, col_f2 = st.columns(2)
+    
+    with col_f1:
+        # Padrão: últimos 30 dias
+        data_ini = st.date_input("Início", datetime.now() - timedelta(days=30))
+    with col_f2:
+        data_fim = st.date_input("Fim", datetime.now())
+    
+    # 2. Carregamento de Dados Filtrados
+    dash_service = DashboardService()
+    df_impacto = dash_service.get_impact_distribution(data_ini, data_fim)
 
     # --- SEÇÃO 1: KPIs (Indicadores Chave) ---
+    stats = dash_service.get_summary_stats(data_ini, data_fim)
     
     col1, col2, col3 = st.columns(3)
     with col1:
@@ -54,6 +70,33 @@ def home():
         if st.button("📄 Relatório PDF", use_container_width=True):
             st.switch_page("src/ui/pages/07_Relatorios.py")
     
+    st.divider()
+
+    # --- SEÇÃO 3: 
+    if not df_impacto.empty:
+        # Mapeamento de cores para manter a identidade visual
+        cores_map = {
+            "Crítico": "#EF553B", # Vermelho
+            "Alto": "#FFA15A",    # Laranja
+            "Médio": "#636EFA",   # Azul
+            "Baixo": "#AB63FA"    # Roxo/Cinza
+        }
+
+        # Criando o gráfico com Plotly
+        fig = px.pie(
+            df_impacto, 
+            values='total', 
+            names='impacto', 
+            title="Distribuição de Valor de Negócio (Impacto)",
+            color='impacto',
+            color_discrete_map=cores_map,
+            hole=0.4 # Transforma em gráfico de rosca
+        )
+
+        st.plotly_chart(fig, use_container_width=True)
+    else:
+        st.info("Ainda não há tarefas cadastradas para gerar o gráfico de impacto.")
+
     st.divider()
 
     # --- NOVA SEÇÃO: BACKLOG DE DESENVOLVIMENTO ---

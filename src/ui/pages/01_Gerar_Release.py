@@ -1,5 +1,5 @@
 import streamlit as st
-from src.services.tarefa_service import TarefaService
+from services.task_service import TaskService
 from src.models.release import Release
 from src.models.tarefa import Tarefa
 from src.core import config
@@ -13,7 +13,7 @@ init_page("Gerar Release", "wide")
 st.title("📦 Gerar / Atualizar Release")
 
 # 1. Carregamento e Filtro
-tarefa_service = TarefaService()
+tarefa_service = TaskService()
 df_total = tarefa_service.get_all_tasks_for_release()
 
 # Filtro pré-definido na lateral

@@ -4,3 +4,4 @@ python-dotenv
 requests
 fpdf2
 pathlib
+plotly

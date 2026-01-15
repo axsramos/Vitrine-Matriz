@@ -11,6 +11,7 @@ class Tarefa(CrudMixin):
         "bitrix_task_id",
         "titulo",
         "descricao_tecnica",
+        "impacto",
         "impacto_negocio",
         "id_desenvolvedor",
         "id_release",

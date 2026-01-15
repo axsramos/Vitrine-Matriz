@@ -82,5 +82,48 @@ else:
                     st.session_state["selected_dev_id"] = row['id']
                     st.switch_page(config.get_page("04_Detalhes_Dev.py"))
 
+st.divider()
+
+dev_service = DevService()
+# 1. Seleção de Desenvolvedor
+df_equipa = dev_service.get_team_stats()
+dev_nomes = df_equipa['nome'].tolist()
+dev_sel = st.selectbox("Consultar Especialista:", options=dev_nomes)
+
+if dev_sel:
+    dev_id = df_equipa[df_equipa['nome'] == dev_sel]['id'].values[0]
+    dev_info = df_equipa[df_equipa['nome'] == dev_sel].iloc[0]
+    df_profile = dev_service.get_dev_full_profile(dev_id)
+
+    # 2. Cabeçalho do Perfil (Destaque)
+    col1, col2, col3 = st.columns([1, 2, 1])
+    with col1:
+        st.image("https://cdn-icons-png.flaticon.com/512/3135/3135715.png", width=150) # Placeholder
+    with col2:
+        st.header(dev_sel)
+        st.subheader(f"🚀 {dev_info['cargo']}")
+        st.write(f"**Bio:** {dev_info['bio'] or 'Desenvolvedor focado em entregas de alto valor.'}")
+    with col3:
+        st.metric("Total de Entregas", dev_info['total_tarefas'])
+
+    st.divider()
+
+    # 3. Timeline de Impacto
+    st.markdown("### 📈 Histórico de Contribuições")
+    
+    if df_profile.empty:
+        st.info("Este desenvolvedor ainda não possui tarefas registadas.")
+    else:
+        for _, row in df_profile.iterrows():
+            with st.expander(f"📌 {row['tarefa_titulo']} (v{row['versao'] or 'Aguardando'})"):
+                c1, c2 = st.columns([1, 3])
+                
+                # Badge de Impacto
+                cor = "red" if row['impacto'] == "Crítico" else "orange" if row['impacto'] == "Alto" else "blue"
+                c1.markdown(f"**Impacto:** :{cor}[{row['impacto']}]")
+                c1.caption(f"📅 {row['data']}")
+                
+                c2.markdown(f"**Valor de Negócio:**\n{row['impacto_negocio']}")
+
 st.markdown("---")
 st.caption(f"Dados gerados a partir do cruzamento de metadados do { config.APP_TITLE } e Bitrix24.")

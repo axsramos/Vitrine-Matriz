@@ -28,3 +28,20 @@ class DevService:
         """
         with get_connection() as conn:
             return pd.read_sql_query(query, conn, params=(dev_id,))
+    
+    def get_dev_full_profile(self, dev_id):
+        """Retorna o histórico detalhado de entregas de um desenvolvedor."""
+        query = """
+            SELECT 
+                t.titulo as tarefa_titulo, 
+                t.impacto, 
+                t.impacto_negocio,
+                r.versao,
+                t.AudIns as data
+            FROM tarefas t
+            LEFT JOIN releases r ON t.id_release = r.id
+            WHERE t.id_desenvolvedor = ? AND t.AudDlt IS NULL
+            ORDER BY t.AudIns DESC
+        """
+        with get_connection() as conn:
+            return pd.read_sql_query(query, conn, params=(dev_id,))
