@@ -1,7 +1,6 @@
 ### 🛠️ Próximas Entregas (Backlog)
 
-- [ ] **Segurança:** Implementação de tela de Login e níveis de acesso (Admin/Viewer).
-- [ ] **Integração Bitrix24:** Sincronização automática de tarefas via Webhooks.
-- [ ] **Métricas de Valor:** Adição de Score de Impacto nas tarefas.
-- [ ] **Limpeza de Assets:** Automação para exclusão de fotos de perfis inativados.
-- [ ] **Filtros Avançados:** Busca por período e tecnologia no Portfólio.
+- [ ] **Próximo:** Integração Bitrix24 Automação Sincronização via Webhooks (v0.4.0).
+- [ ] **Pendente:** Limpeza de Assets Infra Script para exclusão de fotos órfãs (v0.4.0).
+- [ ] **Pendente:** Filtros Avançados UX/UI Adição de filtro por Tecnologia no Portfólio.
+- [ ] **Novo:** Login Social Segurança OAuth com Google/Facebook (v0.5.0).

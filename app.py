@@ -114,7 +114,7 @@ def home():
 
     st.divider()
     
-    st.caption("Versão 1.0.0-beta | Desenvolvido para gestão estratégica do Portal Matriz.")
+    st.caption("Versão 0.3.0-beta | Desenvolvido para gestão estratégica do Portal Matriz.")
 
 def login_page():
     # Centralizando o formulário na tela
