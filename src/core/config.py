@@ -1,23 +1,37 @@
 import os
-from pathlib import Path
 from dotenv import load_dotenv
+from pathlib import Path
 
+# Carrega as variáveis do arquivo .env
 load_dotenv()
 
-# Configurações de UI
-APP_TITLE = os.getenv("APP_TITLE", "Vitrine Matriz")
-APP_SUBTITLE = os.getenv("APP_SUBTITLE", "Portal de Transparência")
+APP_TITLE = 'APP_TITLE'
+APP_SUBTITLE = 'APP_SUBTITLE'
+    
+class Config:
+    # Ambiente
+    ENV = os.getenv("APP_ENV", "local")
 
-# Caminho base do projeto (onde está o app.py)
-BASE_DIR = Path(__file__).resolve().parent.parent.parent
+    # Configurações de UI
+    APP_TITLE = os.getenv("APP_TITLE", "Vitrine Matriz")
+    APP_SUBTITLE = os.getenv("APP_SUBTITLE", "Portal de Transparência e Performance")
 
-# Caminho das páginas definido no .env ou padrão
-# Exemplo no .env: PAGES_DIR=src/ui/pages/
-PAGES_DIR = os.getenv("PAGES_DIR", "src/ui/pages/")
+    DB_DRIVER = os.getenv("DB_DRIVER", "sqlite")
+    
+    # 1. Localiza a raiz do projeto
+    current_file = Path(__file__).resolve()
+    BASE_DIR = current_file.parent.parent.parent
+    
+    # 2. Define explicitamente a pasta de dados
+    DATA_DIR = BASE_DIR / "data"
+    
+    # 3. Garante que a pasta existe (importante para evitar erros de I/O)
+    DATA_DIR.mkdir(parents=True, exist_ok=True)
 
-def get_page(page_name: str) -> str:
-    """
-    Retorna o caminho relativo da página para o Streamlit.
-    Exemplo: get_page("01_Gerar_Release.py") -> "src/ui/pages/01_Gerar_Release.py"
-    """
-    return f"{PAGES_DIR}{page_name}"
+    # 4. Configurações do Banco vindas do .env ou valores default
+    DB_NAME = os.getenv("DB_NAME", "database.db") 
+
+    # 5. Monta o caminho FINAL absoluto dentro da pasta data
+    DB_PATH = DATA_DIR / DB_NAME
+    
+

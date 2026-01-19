@@ -1,102 +1,108 @@
-import streamlit as st
 import os
-from src.models.desenvolvedor import Desenvolvedor
+from PIL import Image
+import streamlit as st
 from src.services.dev_service import DevService
-from src.core import config
+from src.core import ui_utils
+from src.models import DevModel
 from src.core.auth_middleware import require_auth
-from src.core.ui_utils import init_page
 
+# 1. Configuração Inicial (Padronizada)
+ui_utils.init_page(page_title="Meu Perfil", icon="👤")
+
+# 2. Segurança (Usa o Middleware Padrão)
+# Isso adiciona automaticamente o botão "Ir para Login" se não estiver logado
 require_auth()
 
-init_page("Gerenciar Perfil", "centered")
-    
-def save_photo(uploaded_file, dev_id):
-    """Encapsula a lógica de salvar o arquivo no disco."""
-    upload_dir = "assets/uploads"
-    if not os.path.exists(upload_dir):
-        os.makedirs(upload_dir)
-    
-    # Define extensão e caminho final
-    file_ext = os.path.splitext(uploaded_file.name)[1]
-    file_name = f"dev_{dev_id}{file_ext}"
-    file_path = os.path.join(upload_dir, file_name)
-    
-    # Gravação binária
-    with open(file_path, "wb") as f:
-        f.write(uploaded_file.getbuffer())
-    
-    return file_path
+# Se passou pelo require_auth, a sessão existe
+current_user = st.session_state['user'] 
+username = current_user['username']
 
-st.title("⚙️ Gerenciar Perfil")
+st.title(f"👤 Perfil: {current_user['name']}")
 
-# 1. Seleção do Desenvolvedor para Edição
-service = DevService()
-df_team = service.get_team_stats()
+dev_service = DevService()
 
-if df_team.empty:
-    st.warning("Nenhum desenvolvedor encontrado para editar.")
-    st.stop()
+# Busca o ID dentro do dicionário do usuário logado
+user_id = current_user.get('id') 
+dev_profile = dev_service.get_dev_by_user_id(user_id)
 
-selected_dev_name = st.selectbox(
-    "Selecione o Desenvolvedor para atualizar:",
-    df_team['nome'].tolist()
-)
+# Abas para separar dados de Conta e dados de Desenvolvedor
+tab1, tab2 = st.tabs(["🔐 Dados da Conta", "💻 Perfil Profissional"])
 
-# Recupera os dados atuais do dev selecionado
-dev_data = df_team[df_team['nome'] == selected_dev_name].iloc[0]
-dev_id = dev_data['id']
+with tab1:
+    with st.container(border=True):
+        st.write(f"**Nome:** {current_user['name']}")
+        st.write(f"**Login:** {username}")
+        st.write(f"**Permissão:** {current_user['role']}")
+        st.info("Para alterar sua senha, utilize o menu lateral 'Segurança' > 'Alterar Senha'.")
 
-st.divider()
-
-# 2. Formulário de Edição
-with st.form("form_edicao_dev", clear_on_submit=False):
-    col1, col2 = st.columns([1, 2])
-    
-    with col1:
-        # Preview da foto atual
-        if dev_data['foto_path'] and os.path.exists(dev_data['foto_path']):
-            st.image(dev_data['foto_path'], caption="Foto Atual", width=150)
-        else:
-            st.info("Sem foto.")
+with tab2:
+    if dev_profile:
+        with st.form("form_profissional"):
+            # Usando o Model carregado para preencher os valores atuais
             
-    with col2:
-        novo_nome = st.text_input("Nome Completo", value=dev_data['nome'])
-        novo_cargo = st.text_input("Cargo/Função", value=dev_data['cargo'])
-    
-    nova_bio = st.text_area("Bio/Menção (Frase do Card)", value=dev_data['bio'])
-    novo_github = st.text_input("URL GitHub", value=dev_data['github_url'])
-    
-    # Componente de Upload
-    nova_foto = st.file_uploader("Trocar Foto de Perfil", type=["jpg", "png", "jpeg"])
-    
-    submit = st.form_submit_button("💾 Salvar Alterações")
+            # Cargo
+            dev_cgo = ui_utils.render_model_field(
+                DevModel, 'DevCgo', 
+                default_value=dev_profile.DevCgo
+            )
+            
+            # Bio (TextArea automático)
+            dev_bio = ui_utils.render_model_field(
+                DevModel, 'DevBio', 
+                default_value=dev_profile.DevBio
+            )
 
-# 3. Processamento do Submit
-if submit:
-    # Instancia o modelo com os dados do formulário
-    dev_model = Desenvolvedor({
-        "id": int(dev_id),
-        "nome": novo_nome,
-        "cargo": novo_cargo,
-        "bio": nova_bio,
-        "github_url": novo_github
-    })
-    
-    # Se houver nova foto, processa o upload primeiro
-    if nova_foto:
-        try:
-            path_salvo = save_photo(nova_foto, dev_id)
-            dev_model.att["foto_path"] = path_salvo
-        except Exception as e:
-            st.error(f"Erro ao salvar imagem: {e}")
-            st.stop()
-    else:
-        # Mantém a foto antiga se não subiu uma nova
-        dev_model.att["foto_path"] = dev_data['foto_path']
+            st.write("### 📸 Foto de Perfil")
+            
+            # 1. Exibe a prévia atual (se existir)
+            if dev_profile.DevFto:
+                try:
+                    st.image(dev_profile.DevFto, caption="Foto Atual", width=150)
+                except:
+                    st.caption("⚠️ Não foi possível carregar a imagem atual.")
 
-    # Persistência via CrudMixin
-    if dev_model.update():
-        st.success(f"Perfil de {novo_nome} atualizado com sucesso!")
-        st.balloons()
-    else:
-        st.error("Erro ao atualizar o banco de dados.")
+            # 2. Componente de Upload
+            uploaded_file = st.file_uploader("Selecione uma nova foto (JPG/PNG)", type=["jpg", "jpeg", "png"])
+
+            if uploaded_file is not None:
+                # 3. Prévia da nova imagem selecionada
+                image = Image.open(uploaded_file)
+                st.image(image, caption="Nova Foto Selecionada", width=150)
+            
+            # Portfolio URL
+            dev_url = ui_utils.render_model_field(
+                DevModel, 'DevPgeUrl', 
+                default_value=dev_profile.DevPgeUrl
+            )
+            
+            st.markdown("---")
+            submitted = st.form_submit_button("💾 Atualizar Perfil Profissional", type="primary")
+
+            if submitted:
+                # 4. Lógica de Salvamento do Arquivo
+                if uploaded_file is not None:
+                    # Cria a pasta de uploads se não existir
+                    upload_path = "data/uploads"
+                    if not os.path.exists(upload_path):
+                        os.makedirs(upload_path)
+                    
+                    # Define o nome do arquivo (sugestão: usar o ID do dev para ser único)
+                    file_ext = uploaded_file.name.split('.')[-1]
+                    file_name = f"dev_{dev_profile.DevCod}.{file_ext}"
+                    full_path = os.path.join(upload_path, file_name)
+                    
+                    # Salva fisicamente o arquivo
+                    with open(full_path, "wb") as f:
+                        f.write(uploaded_file.getbuffer())
+                    
+                    # Atualiza o caminho no objeto para salvar no banco
+                    dev_profile.DevFto = full_path
+
+                # Atualiza os demais campos
+                dev_profile.DevCgo = dev_cgo
+                dev_profile.DevBio = dev_bio
+                # ...
+                
+                if dev_profile.save():
+                    st.success("Perfil atualizado com sucesso!")
+                    st.rerun()

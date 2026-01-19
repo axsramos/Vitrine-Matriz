@@ -1,36 +1,49 @@
-import hashlib
 import pandas as pd
-from src.core.database import get_connection
+from src.models import UserModel
+from src.services.auth_service import AuthService
 
 class UserService:
-    def get_all(self):
-        """Retorna todos os usuários (sem o hash da senha por segurança)."""
-        query = "SELECT id, nome, username, role FROM usuarios"
-        with get_connection() as conn:
-            return pd.read_sql_query(query, conn)
+    def get_all_users(self):
+        # Usa o Mixin para buscar dados
+        data = UserModel.read_all()
+        df = pd.DataFrame(data)
+        if df.empty:
+            return pd.DataFrame(columns=UserModel.FIELDS)
+        return df
 
-    def create(self, nome, username, password, role="Admin"):
-        """Cria um novo usuário com senha criptografada."""
-        password_hash = hashlib.sha256(password.encode()).hexdigest()
-        query = "INSERT INTO usuarios (nome, username, password_hash, role) VALUES (?, ?, ?, ?)"
-        with get_connection() as conn:
-            cursor = conn.cursor()
-            cursor.execute(query, (nome, username, password_hash, role))
-            conn.commit()
+    def create_user(self, name, username, password, role='User'):
+        try:
+            # Verifica se já existe
+            if UserModel.read_all(where="UsrLgn = ?", params=(username,)):
+                return False, f"O login '{username}' já está em uso."
 
-    def delete(self, user_id):
-        """Remove um usuário pelo ID."""
-        with get_connection() as conn:
+            # Hash da senha via AuthService
+            auth = AuthService()
+            pwd_hash = auth.hash_password(password)
+
+            # Cria Model
+            new_user = UserModel()
+            new_user.UsrNme = name
+            new_user.UsrLgn = username
+            new_user.UsrPwdHash = pwd_hash
+            new_user.UsrRle = role
+            
+            if new_user.save():
+                return True, "Usuário criado com sucesso!"
+            return False, "Erro ao salvar no banco."
+            
+        except Exception as e:
+            return False, f"Erro técnico: {str(e)}"
+
+    def delete_user(self, usr_cod):
+        # Implementação simples de exclusão física para este exemplo
+        # Em produção, idealmente seria Logic Delete (UsrAudDlt)
+        from src.core.database import Database
+        try:
+            conn = Database.get_connection()
             cursor = conn.cursor()
-            cursor.execute("DELETE FROM usuarios WHERE id = ?", (user_id,))
+            cursor.execute(f"DELETE FROM {UserModel.TABLE_NAME} WHERE UsrCod = ?", (usr_cod,))
             conn.commit()
-    
-    def update_password(self, user_id, new_password):
-        """Atualiza a senha de um usuário específico."""
-        import hashlib
-        password_hash = hashlib.sha256(new_password.encode()).hexdigest()
-        query = "UPDATE usuarios SET password_hash = ?, AudUpd = CURRENT_TIMESTAMP WHERE id = ?"
-        with get_connection() as conn:
-            cursor = conn.cursor()
-            cursor.execute(query, (password_hash, user_id))
-            conn.commit()
+            return True, "Usuário excluído."
+        except Exception as e:
+            return False, str(e)

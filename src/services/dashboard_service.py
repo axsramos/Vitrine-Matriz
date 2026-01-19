@@ -1,53 +1,70 @@
 import pandas as pd
-from src.core.database import get_connection
+from src.models import TaskModel, ReleaseModel
+from datetime import datetime, timedelta
 
 class DashboardService:
-    def get_summary_stats(self, start_date, end_date):
-        """Retorna estatísticas gerais filtradas por período."""
-        stats = {}
-        # Filtro comum para as queries
-        date_filter = "AND date(AudIns) BETWEEN ? AND ?"
-        params = (start_date, end_date)
+    def get_impact_distribution(self, start_date=None, end_date=None):
+        """
+        Retorna a distribuição de tarefas por Impacto (TskImp).
+        """
+        where_clause = None
+        params = ()
+        
+        if start_date and end_date:
+            where_clause = "TskAudIns BETWEEN ? AND ?"
+            params = (str(start_date), str(end_date))
 
-        with get_connection() as conn:
-            cursor = conn.cursor()
-            
-            # Total de Tarefas no período
-            cursor.execute(f"SELECT COUNT(*) FROM tarefas WHERE AudDlt IS NULL {date_filter}", params)
-            stats['total_tarefas'] = cursor.fetchone()[0]
-            
-            # Total de Releases no período
-            cursor.execute(f"SELECT COUNT(*) FROM releases WHERE AudDlt IS NULL {date_filter}", params)
-            stats['total_releases'] = cursor.fetchone()[0]
-            
-            # Total de Desenvolvedores ativos (geralmente não filtra por data, mas mantemos o padrão se necessário)
-            cursor.execute("SELECT COUNT(*) FROM desenvolvedores WHERE AudDlt IS NULL")
-            stats['total_devs'] = cursor.fetchone()[0]
-            
-        return stats
-    
-    def get_tasks_per_dev(self):
-        """Retorna contagem de tarefas por desenvolvedor para o gráfico."""
-        query = """
-            SELECT d.nome, COUNT(t.id) as total
-            FROM desenvolvedores d
-            LEFT JOIN tarefas t ON d.id = t.id_desenvolvedor
-            WHERE d.AudDlt IS NULL AND t.AudDlt IS NULL
-            GROUP BY d.nome
-            ORDER BY total DESC
+        # Busca dados via Model (Tabela T_TSK)
+        data = TaskModel.read_all(fields=['TskImp', 'TskCod'], where=where_clause, params=params)
+        df = pd.DataFrame(data)
+
+        if df.empty:
+            return pd.DataFrame(columns=['Impacto', 'Total'])
+
+        # Agrupa e renomeia
+        df_grouped = df.groupby('TskImp').size().reset_index(name='Total')
+        df_grouped.rename(columns={'TskImp': 'Impacto'}, inplace=True)
+        
+        return df_grouped
+
+    def get_tasks_evolution(self, days=30):
         """
-        with get_connection() as conn:
-            import pandas as pd
-            return pd.read_sql_query(query, conn)
-    
-    def get_impact_distribution(self, start_date, end_date):
-        """Retorna a distribuição de impacto filtrada por período."""
-        query = """
-            SELECT impacto, COUNT(*) as total 
-            FROM tarefas 
-            WHERE AudDlt IS NULL 
-            AND date(AudIns) BETWEEN ? AND ?
-            GROUP BY impacto
+        Retorna a evolução de tarefas criadas nos últimos X dias.
         """
-        with get_connection() as conn:
-            return pd.read_sql_query(query, conn, params=(start_date, end_date))
+        cutoff_date = (datetime.now() - timedelta(days=days)).strftime('%Y-%m-%d')
+        
+        data = TaskModel.read_all(
+            fields=['TskAudIns', 'TskCod'],
+            where="TskAudIns >= ?",
+            params=(cutoff_date,)
+        )
+        df = pd.DataFrame(data)
+
+        if df.empty:
+            return pd.DataFrame(columns=['Data', 'Quantidade'])
+
+        # Converte para data e agrupa
+        df['Data'] = pd.to_datetime(df['TskAudIns']).dt.date
+        df_grouped = df.groupby('Data').size().reset_index(name='Quantidade')
+        
+        return df_grouped
+
+    def get_latest_releases(self, limit=5):
+        """
+        Retorna as últimas releases publicadas.
+        """
+        data = ReleaseModel.read_all()
+        df = pd.DataFrame(data)
+
+        if df.empty:
+            return pd.DataFrame(columns=['Versao', 'Data', 'Titulo'])
+
+        if 'RelDtaPub' in df.columns:
+            df['RelDtaPub'] = pd.to_datetime(df['RelDtaPub'])
+            df = df.sort_values(by='RelDtaPub', ascending=False).head(limit)
+            
+            return df[['RelVrs', 'RelDtaPub', 'RelTtlCmm']].rename(
+                columns={'RelVrs': 'Versao', 'RelDtaPub': 'Data', 'RelTtlCmm': 'Titulo'}
+            )
+        
+        return df

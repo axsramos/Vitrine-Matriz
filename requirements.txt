@@ -5,3 +5,6 @@ requests
 fpdf2
 pathlib
 plotly
+sqlalchemy
+mysql-connector-python
+psycopg2-binary

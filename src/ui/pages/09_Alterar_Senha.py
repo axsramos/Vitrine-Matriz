@@ -1,34 +1,36 @@
 import streamlit as st
-from src.services.user_service import UserService
 from src.services.auth_service import AuthService
 from src.core.auth_middleware import require_auth
-from src.core.ui_utils import init_page
 
-# Proteção da página
-require_auth()
-init_page("Alterar Senha")
+st.set_page_config(page_title="Alterar Senha")
+require_auth() # Protege a página
 
-st.title("🔑 Alterar Minha Senha")
+st.title("🔒 Alterar Senha")
 
-user_info = st.session_state.user # Dados do usuário logado
-service = UserService()
 auth_service = AuthService()
+user_session = st.session_state.get('user', {})
+current_user = user_session.get('username')
 
-with st.form("form_alterar_senha"):
-    senha_atual = st.text_input("Senha Atual", type="password")
-    nova_senha = st.text_input("Nova Senha", type="password")
-    confirma_senha = st.text_input("Confirme a Nova Senha", type="password")
+if not current_user:
+    st.error("Sessão inválida. Faça login novamente.")
+    st.stop()
+
+st.info(f"Alterando senha para: **{current_user}**")
+
+with st.form("form_change_pass"):
+    new_pass = st.text_input("Nova Senha", type="password")
+    confirm_pass = st.text_input("Confirme a Nova Senha", type="password")
     
-    if st.form_submit_button("Atualizar Senha", use_container_width=True):
-        # 1. Valida a senha atual
-        if not auth_service.check_login(user_info['username'], senha_atual):
-            st.error("A 'Senha Atual' está incorreta.")
-        # 2. Valida se as novas são iguais
-        elif nova_senha != confirma_senha:
-            st.warning("A nova senha e a confirmação não conferem.")
-        # 3. Valida tamanho mínimo (exemplo de boa prática)
-        elif len(nova_senha) < 6:
-            st.warning("A nova senha deve ter pelo menos 6 caracteres.")
+    submitted = st.form_submit_button("Atualizar Senha")
+    
+    if submitted:
+        if new_pass != confirm_pass:
+            st.error("As senhas não coincidem.")
+        elif not new_pass:
+            st.error("A senha não pode ser vazia.")
         else:
-            service.update_password(user_info['id'], nova_senha)
-            st.success("Senha alterada com sucesso!")
+            success, msg = auth_service.change_password(current_user, new_pass)
+            if success:
+                st.success(msg)
+            else:
+                st.error(msg)

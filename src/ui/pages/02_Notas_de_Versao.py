@@ -1,32 +1,44 @@
 import streamlit as st
 from src.services.release_service import ReleaseService
-from src.core import config
-from src.core.ui_utils import init_page
+from src.services.task_service import TaskService
 
-init_page("Notas de Versão", "centered")
+st.set_page_config(page_title="Notas de Versão (Changelog)")
 
-st.title("🗒️ Notas de Versão")
-st.markdown("---")
+st.title("📜 Notas de Versão")
+st.markdown("Acompanhe a evolução do projeto e as entregas realizadas.")
 
-service = ReleaseService()
-df = service.get_all_releases_with_tasks()
+rel_service = ReleaseService()
+task_service = TaskService()
 
-if df.empty:
-    st.info("Nenhuma nota de versão publicada até ao momento.")
+# 1. Busca todas as releases ordenadas
+df_releases = rel_service.get_all_releases()
+
+if df_releases.empty:
+    st.info("Nenhuma versão publicada ainda.")
 else:
-    # Agrupamos por versão para exibir o cabeçalho uma única vez
-    for versao, grupo in df.groupby("versao", sort=False):
-        if versao == 'Sem Versão':
-            st.header("⏳ Entregas em Aguardo de Release")
-            st.caption("Estas tarefas já foram concluídas mas ainda não foram publicadas em uma versão oficial.")
-        else:
-            st.header(f"Versão {versao}")
-            st.caption(f"Publicado em: {grupo['data_publicacao'].iloc[0]}")
-            st.subheader(grupo['titulo_comunicado'].iloc[0])
+    # Itera sobre as versões para montar o Changelog visual
+    for index, row in df_releases.iterrows():
+        versao = row['RelVrs']
+        titulo = row['RelTtlCmm']
+        data_pub = row['RelDtaPub']
+        rel_cod = row['RelCod']
+        
+        # Container da Versão
+        with st.expander(f"📦 {versao} - {titulo} ({data_pub})", expanded=(index == 0)):
+            # Busca tarefas vinculadas a esta release (Pelo RelCod)
+            df_tasks = task_service.get_tasks_by_release(rel_cod)
             
-            # Lista de Itens da Release
-            for _, row in grupo.iterrows():
-                with st.expander(f"🔹 {row['tarefa_titulo']}", expanded=False):
-                    st.markdown(row['descricao_tecnica'])
-            
-            st.markdown("---")
+            if not df_tasks.empty:
+                st.markdown("### Mudanças e Melhorias")
+                
+                for _, task in df_tasks.iterrows():
+                    # Formata o item da lista
+                    # Ícone baseado no impacto
+                    impacto = task.get('TskImp', 'Baixo')
+                    icon = "🔥" if impacto == 'Crítico' else "✨" if impacto == 'Alto' else "🔹"
+                    
+                    st.markdown(f"{icon} **[{task['TskExtCod']}] {task['TskTtl']}**")
+                    if task['TskDsc']:
+                        st.caption(f"> {task['TskDsc']}")
+            else:
+                st.caption("Esta versão não possui tarefas detalhadas vinculadas.")

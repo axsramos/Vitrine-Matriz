@@ -1,34 +1,39 @@
-from src.core.database import get_connection
+import pandas as pd
+from src.models import ReleaseModel
 
 class ReleaseService:
-    def get_all_releases_with_tasks(self):
-        """Versão corrigida: Adicionado JOIN com desenvolvedores para o campo 'desenvolvedor'."""
-        query = """
-            SELECT 
-                COALESCE(r.versao, 'Sem Versão') as versao, 
-                r.titulo_comunicado, 
-                r.data_publicacao,
-                t.titulo as tarefa_titulo, 
-                t.descricao_tecnica,
-                t.impacto_negocio,
-                d.nome as desenvolvedor  -- Campo que estava faltando
-            FROM tarefas t
-            LEFT JOIN releases r ON t.id_release = r.id
-            LEFT JOIN desenvolvedores d ON t.id_desenvolvedor = d.id -- Join necessário
-            WHERE t.AudDlt IS NULL
-            ORDER BY r.data_publicacao DESC, t.id DESC
-        """
-        with get_connection() as conn:
-            import pandas as pd
-            return pd.read_sql_query(query, conn)
-    
     def get_all_releases(self):
-        """Versão corrigida: Incluindo o título do comunicado para o relatório."""
-        query = """
-            SELECT id, versao, titulo_comunicado 
-            FROM releases 
-            ORDER BY data_publicacao DESC
-        """
-        with get_connection() as conn:
-            import pandas as pd
-            return pd.read_sql_query(query, conn)
+        # Ordena por Data de Publicação (desc)
+        # Nota: O Mixin simples não tem ORDER BY, então ordenamos no Pandas
+        data = ReleaseModel.read_all()
+        df = pd.DataFrame(data)
+        
+        if df.empty:
+            return pd.DataFrame(columns=ReleaseModel.FIELDS)
+            
+        # Ordenação via Pandas
+        if 'RelDtaPub' in df.columns:
+            df['RelDtaPub'] = pd.to_datetime(df['RelDtaPub'])
+            df = df.sort_values(by='RelDtaPub', ascending=False)
+            
+        return df
+
+    def create_release(self, version: str, title: str):
+        try:
+            # Verifica duplicidade
+            existing = ReleaseModel.read_all(where="RelVrs = ?", params=(version,))
+            if existing:
+                return False, f"A versão {version} já existe."
+
+            # Cria nova release
+            rel = ReleaseModel()
+            rel.RelVrs = version
+            rel.RelTtlCmm = title
+            # RelDtaPub é automático no banco ou podemos setar aqui
+            
+            if rel.save():
+                return True, rel.RelCod # Retorna ID para vincular tarefas
+            return False, "Erro ao salvar release."
+            
+        except Exception as e:
+            return False, f"Erro: {str(e)}"

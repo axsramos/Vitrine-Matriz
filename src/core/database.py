@@ -1,14 +1,41 @@
 import sqlite3
 import os
-from dotenv import load_dotenv
+from src.core.config import Config
 
-load_dotenv()
-# BASE_DIR = Path(__file__).resolve().parent.parent.parent
-# DB_PATH_DEFAULT = os.path.join(BASE_DIR, "data", "database.db")
-DB_PATH = os.getenv("DB_PATH", "data/database.db")
+class Database:
+    _connection = None
 
+    @staticmethod
+    def get_connection():
+        """
+        Retorna uma conexão Singleton com o banco de dados.
+        """
+        if Database._connection is None:
+            if Config.DB_DRIVER == "sqlite":
+                # check_same_thread=False é crucial para o Streamlit
+                Database._connection = sqlite3.connect(Config.DB_PATH, check_same_thread=False)
+                # Define a factory para retornar dicionários
+                Database._connection.row_factory = Database.dict_factory
+        
+        return Database._connection
+
+    @staticmethod
+    def dict_factory(cursor, row):
+        """
+        Converte as linhas do banco (tuplas) em dicionários Python reais.
+        Permite acesso via row['NomeColuna'].
+        """
+        d = {}
+        for idx, col in enumerate(cursor.description):
+            d[col[0]] = row[idx]
+        return d
+
+    @staticmethod
+    def close_connection():
+        if Database._connection:
+            Database._connection.close()
+            Database._connection = None
+
+# Função auxiliar para manter compatibilidade com códigos antigos se necessário
 def get_connection():
-    """Retorna uma conexão ativa com o SQLite."""
-    # Garante que a pasta data/ existe
-    os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
-    return sqlite3.connect(DB_PATH)
+    return Database.get_connection()
