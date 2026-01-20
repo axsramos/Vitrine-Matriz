@@ -1,6 +1,36 @@
+from PIL import Image, ImageOps
+import os
 import streamlit as st
 from typing import Any
 
+def load_avatar(image_path, size=(150, 150)):
+    """
+    Carrega o avatar do usuário.
+    Se falhar por qualquer motivo (caminho None, arquivo não existe, erro de leitura),
+    retorna a imagem padrão ou um placeholder seguro.
+    """
+    default_path = "assets/default_user.png"
+    
+    # 1. Tenta carregar a imagem do usuário
+    if image_path and os.path.exists(image_path):
+        try:
+            img = Image.open(image_path)
+            return ImageOps.fit(img, size, Image.Resampling.LANCZOS)
+        except Exception:
+            pass # Se der erro, cai para o default
+            
+    # 2. Tenta carregar o default_user.png
+    if os.path.exists(default_path):
+        try:
+            img = Image.open(default_path)
+            return ImageOps.fit(img, size, Image.Resampling.LANCZOS)
+        except Exception:
+            pass
+            
+    # 3. Fallback de Emergência (Se nem o padrão existir, para não travar o login)
+    # Cria um quadrado cinza simples em memória
+    return Image.new('RGB', size, color=(200, 200, 200))
+    
 # --- Função de Inicialização (Restaurada) ---
 def init_page(page_title: str = "Vitrine Matriz", layout: str = "wide", sidebar_state: str = "expanded", icon: str = "🚀"):
     """
