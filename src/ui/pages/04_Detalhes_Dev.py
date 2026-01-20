@@ -1,77 +1,69 @@
-import os
 import streamlit as st
+import pandas as pd
+import os
 from src.services.dev_service import DevService
-from src.services.task_service import TaskService
-from src.models import DevModel
+from src.core import ui_utils
 
-# Define o caminho da imagem padrão
-DEFAULT_IMAGE = "assets/default_user.png"
-
-st.set_page_config(page_title="Detalhes do Desenvolvedor")
+# 1. Configuração da Página
+ui_utils.init_page(page_title="Detalhes do Desenvolvedor", icon="🕵️")
 
 st.title("🕵️ Detalhes do Profissional")
+st.markdown("Visualize informações detalhadas e métricas de cada membro da equipe.")
+st.markdown("---")
 
+# 2. Carregamento dos Dados
 dev_service = DevService()
-task_service = TaskService()
 
-# 1. Seleção do Desenvolvedor
-df_devs = dev_service.get_all_developers()
+# CORREÇÃO: Usamos o método novo que retorna o DataFrame consolidado (T_Dev + T_UsrPrf)
+df_devs = dev_service.get_all_devs_dataframe()
 
 if df_devs.empty:
-    st.warning("Nenhum desenvolvedor cadastrado.")
+    st.warning("Nenhum desenvolvedor encontrado na base de dados.")
     st.stop()
 
-# Cria um Selectbox para escolher quem detalhar
-dev_options = df_devs['DevCod'].tolist()
-dev_names = {row['DevCod']: row['DevNme'] for _, row in df_devs.iterrows()}
+# 3. Seletor de Desenvolvedor
+# Cria uma lista de nomes para o Selectbox
+opcoes_devs = df_devs['DevNme'].tolist()
+selected_dev_name = st.selectbox("Selecione um profissional:", options=opcoes_devs)
 
-selected_dev_cod = st.selectbox(
-    "Selecione o Desenvolvedor:",
-    options=dev_options,
-    format_func=lambda x: dev_names.get(x, x)
-)
+# Filtra o DataFrame para pegar os dados do selecionado
+# (Como DevNme não é único idealmente, em produção usaríamos ID, mas aqui mantém a simplicidade visual)
+dev_data = df_devs[df_devs['DevNme'] == selected_dev_name].iloc[0]
 
-if selected_dev_cod:
-    # 2. Carrega dados do Model
-    dev_model = DevModel()
+# --- Exibição dos Detalhes ---
+
+# Layout em colunas (Foto/Info à esquerda, Métricas/Bio à direita)
+col1, col2 = st.columns([1, 2])
+
+with col1:
+    with st.container(border=True):
+        # Tratamento da Foto (UsrPrfFto)
+        fto_path = dev_data['UsrPrfFto']
+        if fto_path and os.path.exists(fto_path):
+            st.image(fto_path, use_container_width=True)
+        else:
+            st.image("assets/default_user.png", use_container_width=True)
+        
+        # Link do Portfólio
+        url = dev_data['UsrPrfUrl']
+        if url:
+            st.link_button("🌐 Visitar Portfólio", url, use_container_width=True)
+
+with col2:
+    st.subheader(dev_data['DevNme'])
     
-    if dev_model.load(selected_dev_cod):
-        
-        # Layout de Cabeçalho
-        col_img, col_info = st.columns([1, 3])
-        
-        with col_img:
-            # img_url = dev_model.DevFto if dev_model.DevFto else "https://via.placeholder.com/200"
-            img_url = dev_model.DevFto if dev_model.DevFto else DEFAULT_IMAGE
-            st.image(img_url, width=150)
-            
-            if dev_model.DevPgeUrl:
-                st.link_button("Acessar GitHub/Portfólio", dev_model.DevPgeUrl)
-        
-        with col_info:
-            st.header(dev_model.DevNme)
-            st.subheader(f"💼 {dev_model.DevCgo}")
-            st.write(dev_model.DevBio)
-            
-        st.divider()
-        
-        # 3. Histórico de Tarefas (Timeline)
-        st.subheader("Histórico de Entregas")
-        
-        # Busca tarefas onde DevCod é o selecionado
-        # Usamos o método read_join para ter dados da Release também
-        df_tasks = task_service.get_all_tasks() # Pega tudo e filtra no pandas (ou cria método específico no service)
-        
-        if not df_tasks.empty:
-            # Filtra pelo DevCod (convertendo para int para garantir)
-            df_dev_tasks = df_tasks[df_tasks['DevCod'] == selected_dev_cod]
-            
-            if not df_dev_tasks.empty:
-                for _, task in df_dev_tasks.iterrows():
-                    rel_info = f" (v{task['RelVrs']})" if 'RelVrs' in task and task['RelVrs'] else " (Em Backlog)"
-                    st.markdown(f"- **{task['TskTtl']}** {rel_info}")
-                    st.caption(f"  *Impacto: {task['TskImp']}*")
-            else:
-                st.info("Este desenvolvedor ainda não possui tarefas vinculadas.")
+    # Cargo (UsrPrfCgo)
+    cargo = dev_data['UsrPrfCgo'] if dev_data['UsrPrfCgo'] else "Cargo não definido"
+    st.caption(f"💼 {cargo}")
+    
+    st.write("### Sobre")
+    # Bio (UsrPrfBio)
+    bio = dev_data['UsrPrfBio']
+    if bio:
+        st.write(bio)
     else:
-        st.error("Erro ao carregar dados do desenvolvedor.")
+        st.info("Este profissional ainda não adicionou uma biografia.")
+
+    # Exemplo de onde você pode expandir futuramente (Métricas, Tarefas, etc.)
+    # st.divider()
+    # st.metric("Tarefas Concluídas", 42) # Exemplo estático

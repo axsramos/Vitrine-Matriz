@@ -1,77 +1,60 @@
 import pandas as pd
-from src.models import DevModel
+from src.models.DevModel import DevModel
+from src.models.UserProfileModel import UserProfileModel
 
 class DevService:
-    def get_all_developers(self):
-        data = DevModel.read_all()
-        
-        df = pd.DataFrame(data)
-        if df.empty:
-            return pd.DataFrame(columns=DevModel.FIELDS)
-        return df
-    
-    def get_dev_by_user_id(self, user_id):
-        model = DevModel()
-        # Busca pelo novo campo de ligação que criamos
-        if model.read_by_field('DevUsrCod', user_id):
-            return model
-        return None
-
-    def get_dev_by_login(self, login: str):
-        """Busca um desenvolvedor pelo login (DevLgnExt)"""
-        # Assumindo que você tem um campo para vincular ao login do usuário.
-        # Se não tiver 'DevLgnExt' no seu DevMD, usaremos o 'DevNme' ou criaremos o campo.
-        # Para v0.4.0, vamos assumir que o DevNme deve ser único ou usaremos o filtro simples.
-        
-        # Vamos tentar filtrar onde o nome ou login bate
-        # Nota: O ideal é ter DevLgnExt na T_DEV. Se não tiver, usaremos o Nome para vincular.
-        devs = DevModel.read_all()
-        for dev in devs:
-            # Verifica se existe algum campo de login ou se o nome bate
-            if dev.get('DevPgeUrl') == login: # Improviso: Usando PgeUrl para guardar login se não houver campo específico
-                return DevModel(**dev)
-            # Ou verificação por nome exato
-            if dev.get('DevNme') == login:
-                return DevModel(**dev)
-        return None
-    
-    def save_developer(self, dev_data: dict):
-        try:
-            # Padrão: Data Transfer Object (via dict) -> Entity (Model)
-            dev = DevModel(**dev_data)
-            
-            if dev.save():
-                return True, "Desenvolvedor salvo com sucesso!"
-            return False, "Erro ao salvar dados."
-            
-        except Exception as e:
-            return False, f"Erro técnico: {str(e)}"
-    
-    def create_dev_from_user(self, user_name: str, user_login: str):
+    def get_all_devs_dataframe(self):
         """
-        Cria um perfil de desenvolvedor baseado nos dados do usuário (T_USR).
+        Retorna um DataFrame consolidado utilizando apenas os Models (CrudMixin).
+        Realiza o 'Join' em memória usando Pandas.
         """
-        try:
-            # 1. Verifica duplicidade (Regra de Negócio)
-            # Aqui verificamos se já existe um Dev com esse Nome
-            existing = DevModel.read_all(where="DevNme = ?", params=(user_name,))
-            if existing:
-                return False, f"Já existe um desenvolvedor com o nome '{user_name}'."
+        # 1. Busca dados brutos usando o padrão CrudMixin
+        dev_model = DevModel()
+        profile_model = UserProfileModel()
+        
+        devs_data = dev_model.read_all()
+        profiles_data = profile_model.read_all()
 
-            # 2. Cria o objeto Model
-            new_dev = DevModel()
-            new_dev.DevNme = user_name
-            new_dev.DevCgo = "Full Stack" # Cargo Padrão
-            new_dev.DevBio = f"Perfil gerado automaticamente a partir do usuário {user_login}."
-            new_dev.DevPgeUrl = ""   # Pode ser link do GitHub
-            new_dev.DevFto = ""      # Pode ser URL da foto
+        # Se não houver devs, retorna DF vazio com as colunas esperadas
+        if not devs_data:
+            return pd.DataFrame(columns=['DevNme', 'UsrPrfCgo', 'UsrPrfBio', 'UsrPrfFto', 'UsrPrfUrl'])
+
+        # 2. Converte para DataFrames
+        df_devs = pd.DataFrame(devs_data)
+        df_profiles = pd.DataFrame(profiles_data)
+
+        # 3. Tratamento de Tipos para o Join (CORREÇÃO DO ERRO)
+        if not df_devs.empty:
+            # Garante que é numérico, coage erros para NaN
+            df_devs['DevUsrCod'] = pd.to_numeric(df_devs['DevUsrCod'], errors='coerce')
+            # Preenche Nulos com 0 para permitir a conversão para Int sem erro
+            df_devs['DevUsrCod'] = df_devs['DevUsrCod'].fillna(0).astype(int)
             
-            # DICA: Se quiser vincular estritamente, idealmente T_DEV teria uma coluna DevUsrLgn
-            # Como não temos certeza se alterou T_DEV para ter Login, salvamos o básico.
+        if not df_profiles.empty:
+            # Mesma proteção para o lado do Perfil
+            df_profiles['UsrPrfUsrCod'] = pd.to_numeric(df_profiles['UsrPrfUsrCod'], errors='coerce')
+            df_profiles['UsrPrfUsrCod'] = df_profiles['UsrPrfUsrCod'].fillna(0).astype(int)
             
-            if new_dev.save():
-                return True, f"Perfil de desenvolvedor criado para: {user_name}"
-            return False, "Erro ao salvar no banco de dados."
-            
-        except Exception as e:
-            return False, f"Erro técnico: {str(e)}"
+            # MERGE: Devs + Perfil
+            df_merged = pd.merge(
+                df_devs, 
+                df_profiles, 
+                left_on='DevUsrCod', 
+                right_on='UsrPrfUsrCod', 
+                how='left'
+            )
+        else:
+            df_merged = df_devs
+            cols_perfil = ['UsrPrfCgo', 'UsrPrfBio', 'UsrPrfFto', 'UsrPrfUrl']
+            for col in cols_perfil:
+                df_merged[col] = None
+
+        # 4. Seleciona e Trata colunas finais
+        df_final = df_merged.fillna({
+            'UsrPrfCgo': 'Colaborador', # Ajuste no default
+            'UsrPrfBio': '',
+            'UsrPrfFto': '',
+            'UsrPrfUrl': ''
+        })
+
+        return df_final
