@@ -25,7 +25,7 @@ class TskMD:
         "TskAudUsr",
     ]
     
-    FIELDS = FIELDS_PK + FIELDS_REQUIRED + ["TskDsc", "TskImp", "DevCod", "RelCod"] + FIELDS_AUDIT
+    FIELDS = FIELDS_PK + FIELDS_FK["Fields"] + FIELDS_REQUIRED + ["TskDsc", "TskImp"] + FIELDS_AUDIT
     
     FIELDS_MD = {
         "TskCod": {

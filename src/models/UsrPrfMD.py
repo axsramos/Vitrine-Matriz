@@ -2,13 +2,16 @@ from src.core.database import get_connection
 from src.models.AudMD import AudMD
 
 class UsrPrfMD:
-    TABLE_NAME = 'T_Usr_Prf'
+    TABLE_NAME = "T_UsrPrf"
     
-    FIELDS_PK = ['PrfCod']
-    FIELDS_FK = []
+    FIELDS_PK = ["UsrPrfCod"]
+    FIELDS_FK = {
+        "Fields": ["UsrPrfUsrCod"],
+        "FKUsrPrf01": { "FieldsKey": ["UsrPrfUsrCod"], "References": "T_USR", "Fields":["UsrCod"]}
+    }
     TABLE_IDX = {
-        "IDXUsrPrf01": ["DevAudIns"],
-        "IDXUsrPrf02": ["PrfCgo"]
+        "IDXUsrPrf01": ["UsrPrfAudIns"],
+        "IDXUsrPrf02": ["UsrPrfCgo"]
     }
     FIELDS_REQUIRED = []
     FIELDS_AUDIT = [
@@ -17,27 +20,26 @@ class UsrPrfMD:
         "UsrPrfAudDlt",
         "UsrPrfAudUsr",
     ]
-    FIELDS = [
-        "PrfCod",     # PK
-        "PrfUsrCod",  # FK para T_Usr
-        "PrfCgo",     # Cargo
-        "PrfBio",     # Biografia
-        "PrfUrl",     # URL (LinkedIn/Portfólio)
-        "PrfFto",     # Caminho da Foto (Nova localização)
+    FIELDS = FIELDS_PK + FIELDS_FK["Fields"]
+    FIELDS += [
+        "UsrPrfCgo",
+        "UsrPrfBio",
+        "UsrPrfUrl",
+        "UsrPrfFto",
     ]
     FIELDS += FIELDS_AUDIT.copy()
     FIELDS_MD = {
-        "PrfCod": {
+        "UsrPrfCod": {
             "Type": 'INTEGER',
             "Length": '8',
             "Required": True,
             "Default": '',
-            "LongLabel": 'Código do Perfil',
+            "LongLabel": 'Código do Perfil do Usuário',
             "ShortLabel": 'Código',
             "TextPlaceholder": '',
             "TextHelp": '',
         },
-        "PrfUsrCod": {
+        "UsrPrfUsrCod": {
             "Type": 'INTEGER',
             "Length": '8',
             "Required": True,
@@ -47,7 +49,7 @@ class UsrPrfMD:
             "TextPlaceholder": '',
             "TextHelp": '',
         },
-        "PrfCgo": {
+        "UsrPrfCgo": {
             "Type": 'VARCHAR',
             "Length": '255',
             "Required": False,
@@ -57,7 +59,7 @@ class UsrPrfMD:
             "TextPlaceholder": '',
             "TextHelp": '',
         },
-        "PrfBio": {
+        "UsrPrfBio": {
             "Type": 'TEXT',
             "Length": '4000',
             "Required": False,
@@ -67,7 +69,7 @@ class UsrPrfMD:
             "TextPlaceholder": '',
             "TextHelp": '',
         },
-        "PrfUrl": {
+        "UsrPrfUrl": {
             "Type": 'VARCHAR',
             "Length": '999',
             "Required": False,
@@ -77,7 +79,7 @@ class UsrPrfMD:
             "TextPlaceholder": '',
             "TextHelp": '',
         },
-        "PrfFto": {
+        "UsrPrfFto": {
             "Type": 'VARCHAR',
             "Length": '255',
             "Required": False,
