@@ -1,6 +1,11 @@
 from src.core.crud_mixin import CrudMixin
-from src.models.RelMD import RelMD
+from src.models.md.RelMD import RelMD
 
 class ReleaseModel(CrudMixin, RelMD):
     def __init__(self, **kwargs):
-        super().__init__(**kwargs)
+        super().__init__()
+        for field in self.FIELDS:
+            setattr(self, field, None)
+        if kwargs:
+            for k, v in kwargs.items():
+                if hasattr(self, k): setattr(self, k, v)

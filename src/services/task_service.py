@@ -1,41 +1,55 @@
 import pandas as pd
-from src.models import TaskModel
+from src.models.TaskModel import TaskModel
 
 class TaskService:
     def get_all_tasks(self):
+        # Usa o read_join do Model que já traz DevNome e RelVersao
         data = TaskModel.read_join()
-        df = pd.DataFrame(data)
-        if df.empty: return pd.DataFrame(columns=TaskModel.FIELDS)
+        
+        # Colunas extras geradas pelo JOIN
+        extra_cols = ['DevNome', 'RelVersao']
+        all_cols = TaskModel.FIELDS + extra_cols
+        
+        if not data:
+            return pd.DataFrame(columns=all_cols)
+        
+        df = pd.DataFrame(data, columns=all_cols)
         return df
-
-    def get_tasks_by_release(self, rel_cod: int):
-        # Busca tarefas de uma release específica
-        data = TaskModel.read_join(where="T_TSK.RelCod = ?", params=(rel_cod,))
-        return pd.DataFrame(data)
-
-    def get_pending_tasks(self):
-        # NOVO: Busca tarefas sem release (RelCod é NULL ou 0)
-        # O Mixin monta: SELECT ... WHERE T_TSK.RelCod IS NULL
-        data = TaskModel.read_join(where="T_TSK.RelCod IS NULL OR T_TSK.RelCod = ''")
-        return pd.DataFrame(data)
 
     def save_task(self, task_data: dict):
         try:
             task = TaskModel(**task_data)
+            # Define usuário de auditoria se não vier (ex: system)
+            if not task.TrfAudUsr:
+                task.TrfAudUsr = 'system_user' 
+                
             if task.save():
                 return True, "Tarefa salva com sucesso!"
-            return False, "Erro ao persistir tarefa."
+            return False, "Erro ao gravar no banco."
         except Exception as e:
-            return False, f"Erro técnico: {str(e)}"
-            
-    def update_task_release(self, task_cod: int, rel_cod: int):
-        # Atualiza apenas o RelCod de uma tarefa
-        try:
-            task = TaskModel()
-            if task.load(task_cod):
-                task.RelCod = rel_cod
-                task.save()
-                return True
-            return False
-        except:
-            return False
+            return False, f"Erro: {str(e)}"
+
+    def get_pending_tasks(self):
+        """Tarefas sem release (TrfRelCod IS NULL) e não deletadas."""
+        return self.get_all_tasks_filtered(where="t.TrfRelCod IS NULL")
+
+    def get_all_tasks_filtered(self, where):
+        """Helper para chamar read_join com filtro."""
+        data = TaskModel.read_join(where=where)
+        extra_cols = ['DevNome', 'RelVersao']
+        all_cols = TaskModel.FIELDS + extra_cols
+        
+        if not data: return pd.DataFrame(columns=all_cols)
+        return pd.DataFrame(data, columns=all_cols)
+
+    def update_task_release(self, task_id, release_id):
+        """Atualiza o TrfRelCod de uma tarefa."""
+        model = TaskModel()
+        tasks = model.read_all(where="TrfCod = ?", params=(task_id,))
+        if tasks:
+            # Reconstrói objeto
+            current = tasks[0]
+            task_obj = TaskModel(**current)
+            task_obj.TrfRelCod = release_id
+            return task_obj.save()
+        return False

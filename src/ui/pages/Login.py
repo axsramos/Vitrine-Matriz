@@ -1,61 +1,41 @@
 import streamlit as st
-import streamlit.components.v1 as components  # Import necessário para o hack do foco
-from src.services.auth_service import AuthService
-from src.core.ui_utils import init_page, show_error_message, show_success_message
+from src.services.user_service import UserService
+from src.core import ui_utils
+from src.core.config import Config
 
-# Inicialização
-init_page(page_title="Login", icon="🔐")
+# Configuração da página (Login geralmente não usa o menu completo antes de logar)
+st.set_page_config(page_title="Login - Vitrine Matriz", page_icon="🔑")
 
-st.title("🔐 Acesso ao Sistema")
-
-# Se já estiver logado, redireciona para a Home
-if 'user' in st.session_state:
-    st.info(f"Você já está logado como {st.session_state['user']['name']}.")
-    if st.button("Ir para o Painel"):
-        st.switch_page("src/ui/pages/00_Home.py")
-    st.stop()
-
-auth_service = AuthService()
-
-# Layout Centralizado
+# Centralização visual
 col1, col2, col3 = st.columns([1, 2, 1])
 
 with col2:
-    # Usamos st.form para capturar o "Enter" do teclado
-    with st.form(key="login_form"):
-        st.markdown("### Credenciais")
+    # Exibe Logo parametrizado
+    ui_utils.display_logo()
+    
+    st.title("Acesso ao Sistema")
+    
+    with st.form("login_form"):
+        username = st.text_input("Usuário", placeholder="Digite seu login")
+        password = st.text_input("Senha", type="password", placeholder="Digite sua senha")
         
-        # Inputs
-        username = st.text_input("Usuário", placeholder="Seu login")
-        password = st.text_input("Senha", type="password", placeholder="Sua senha")
+        submit = st.form_submit_button("Entrar", use_container_width=True, type="primary")
         
-        # Botão de submit (funciona com Enter)
-        submitted = st.form_submit_button("Entrar", type="primary", use_container_width=True)
-
-    # --- HACK DE AUTOFOCUS (JavaScript) ---
-    # Injeta um script que busca o primeiro input de texto da página e aplica .focus()
-    components.html("""
-        <script>
-            var input = window.parent.document.querySelectorAll("input[type='text']");
-            if (input.length > 0) {
-                input[0].focus();
-            }
-        </script>
-    """, height=0, width=0)
-    # --------------------------------------
-
-    # Lógica de processamento
-    if submitted:
-        if not username or not password:
-            show_error_message("Preencha usuário e senha.")
-        else:
-            success, user_data = auth_service.check_credentials(username, password)
+        if submit:
+            service = UserService()
+            user_data = service.login(username, password)
             
-            if success:
-                st.session_state['user'] = user_data
-                show_success_message(f"Bem-vindo, {user_data['name']}!")
-                st.switch_page("src/ui/pages/00_Home.py")
+            if user_data:
+                # 1. Busca dados do perfil para enriquecer a sessão (Foto, Cargo)
+                profile = service.get_user_profile(user_data['UsrCod'])
+                
+                # 2. Consolida dados na sessão (Padrão Usr...)
+                # Mesclamos os dados básicos com os do perfil
+                st.session_state['user'] = {**user_data, **profile}
+                
+                st.success(f"Bem-vindo, {user_data['UsrNom']}!")
+                st.rerun() # Redireciona para a Home automaticamente via navigation
             else:
-                show_error_message("Usuário ou senha incorretos.")
+                st.error("Usuário ou senha inválidos.")
 
-    st.caption("Caso não tenha acesso, contate o administrador.")
+    st.caption(f"Configuração: {Config.ENV.upper()} Mode")

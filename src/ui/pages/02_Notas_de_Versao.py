@@ -1,44 +1,49 @@
 import streamlit as st
 from src.services.release_service import ReleaseService
 from src.services.task_service import TaskService
+from src.core.auth_middleware import require_auth
 
-st.set_page_config(page_title="Notas de Versão (Changelog)")
+# Proteção de acesso
+require_auth()
 
 st.title("📜 Notas de Versão")
-st.markdown("Acompanhe a evolução do projeto e as entregas realizadas.")
+st.write("Acompanhe o histórico de atualizações e melhorias implementadas no sistema.")
 
 rel_service = ReleaseService()
 task_service = TaskService()
 
-# 1. Busca todas as releases ordenadas
+# 1. Busca todas as releases publicadas (não deletadas)
 df_releases = rel_service.get_all_releases()
 
 if df_releases.empty:
-    st.info("Nenhuma versão publicada ainda.")
+    st.info("ℹ️ Nenhuma release foi publicada até o momento.")
 else:
-    # Itera sobre as versões para montar o Changelog visual
-    for index, row in df_releases.iterrows():
-        versao = row['RelVrs']
-        titulo = row['RelTtlCmm']
-        data_pub = row['RelDtaPub']
-        rel_cod = row['RelCod']
-        
-        # Container da Versão
-        with st.expander(f"📦 {versao} - {titulo} ({data_pub})", expanded=(index == 0)):
-            # Busca tarefas vinculadas a esta release (Pelo RelCod)
-            df_tasks = task_service.get_tasks_by_release(rel_cod)
+    # Itera sobre as releases para criar a visualização em "Timeline"
+    for _, rel in df_releases.iterrows():
+        # Container estilizado para cada versão
+        with st.container(border=True):
+            col_v, col_d = st.columns([1, 4])
             
-            if not df_tasks.empty:
-                st.markdown("### Mudanças e Melhorias")
+            with col_v:
+                st.subheader(f"🚀 {rel['RelVrs']}")
+                st.caption(f"📅 {rel['RelDat']}")
+            
+            with col_d:
+                st.markdown(f"### {rel['RelTtlCmm']}")
                 
-                for _, task in df_tasks.iterrows():
-                    # Formata o item da lista
-                    # Ícone baseado no impacto
-                    impacto = task.get('TskImp', 'Baixo')
-                    icon = "🔥" if impacto == 'Crítico' else "✨" if impacto == 'Alto' else "🔹"
-                    
-                    st.markdown(f"{icon} **[{task['TskExtCod']}] {task['TskTtl']}**")
-                    if task['TskDsc']:
-                        st.caption(f"> {task['TskDsc']}")
-            else:
-                st.caption("Esta versão não possui tarefas detalhadas vinculadas.")
+                # 2. Busca tarefas vinculadas a esta release específica
+                # Usamos o filtro dinâmico que criamos no Passo 4
+                df_tasks = task_service.get_all_tasks_filtered(where=f"t.TrfRelCod = {rel['RelCod']}")
+                
+                if not df_tasks.empty:
+                    st.write("**O que mudou nesta versão:**")
+                    # Exibe como uma lista de tópicos (Markdown)
+                    for _, task in df_tasks.iterrows():
+                        # Ícone baseado na prioridade para destaque visual
+                        icon = "🔴" if task['TrfPrio'] == 'Crítica' else "🔹"
+                        st.markdown(f"{icon} **{task['TrfTtl']}** - *{task['DevNome']}*")
+                else:
+                    st.caption("Nenhuma tarefa detalhada para esta versão.")
+
+st.divider()
+st.caption("Os dados desta página são gerados automaticamente após o fechamento de uma Release.")

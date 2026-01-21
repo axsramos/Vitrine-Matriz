@@ -1,62 +1,55 @@
 import streamlit as st
+import pandas as pd
 from src.services.release_service import ReleaseService
 from src.services.task_service import TaskService
-from src.core import ui_utils
-from src.models import ReleaseModel
+from src.core.auth_middleware import require_auth
 
-st.set_page_config(page_title="Gerar Release")
+require_auth(allowed_roles=['admin', 'manager'])
+
 st.title("📦 Gerar Nova Release")
+st.write("Consolide as tarefas concluídas em uma nova versão oficial do sistema.")
 
 rel_service = ReleaseService()
 task_service = TaskService()
 
-# 1. Formulário da Nova Versão
-with st.container(border=True):
-    st.subheader("Dados da Versão")
-    # Usa render_model_field para consistência
-    version = ui_utils.render_model_field(ReleaseModel, 'RelVrs')
-    title = ui_utils.render_model_field(ReleaseModel, 'RelTtlCmm')
+# 1. Busca tarefas prontas (Concluídas e sem Release)
+df_ready = task_service.get_all_tasks_filtered(where="t.TrfStt = 'Concluído' AND t.TrfRelCod IS NULL")
 
-# 2. Seleção de Tarefas Pendentes
-st.subheader("Vincular Tarefas")
-df_pending = task_service.get_pending_tasks()
-
-if df_pending.empty:
-    st.info("Não há tarefas pendentes para vincular.")
-    selected_tasks = []
+if df_ready.empty:
+    st.info("✨ Não há tarefas concluídas aguardando release no momento.")
 else:
-    # Cria uma coluna amigável para exibição no multiselect
-    # Ex: "[1234] Ajuste no Login"
-    df_pending['display'] = df_pending.apply(
-        lambda x: f"[{x['TskExtCod']}] {x['TskTtl']}", axis=1
+    st.subheader("📋 Tarefas para inclusão")
+    st.dataframe(
+        df_ready[['TrfCod', 'TrfTtl', 'DevNome', 'TrfDatEnt']],
+        column_config={"TrfCod": "ID", "TrfTtl": "Título", "DevNome": "Responsável", "TrfDatEnt": "Conclusão"},
+        use_container_width=True, hide_index=True
     )
     
-    selected_indices = st.multiselect(
-        "Selecione as tarefas que entram nesta versão:",
-        options=df_pending['TskCod'].tolist(),
-        format_func=lambda x: df_pending[df_pending['TskCod'] == x]['display'].values[0]
-    )
-    selected_tasks = selected_indices
-
-# 3. Botão de Ação
-if st.button("🚀 Publicar Release", type="primary"):
-    if not version or not title:
-        ui_utils.show_error_message("Preencha a Versão e o Título.")
-    elif not selected_tasks:
-        ui_utils.show_error_message("Selecione pelo menos uma tarefa.")
-    else:
-        # Cria Release
-        success, result = rel_service.create_release(version, title)
+    st.divider()
+    
+    # 2. Formulário da Nova Release
+    with st.form("form_release"):
+        col1, col2 = st.columns(2)
+        version = col1.text_input("Versão (ex: v1.2.0)", placeholder="vX.X.X")
+        date_rel = col2.date_input("Data da Release")
+        title = st.text_input("Título/Descrição da Versão")
         
-        if success:
-            new_rel_id = result
-            # Vincula Tarefas
-            count = 0
-            for tsk_cod in selected_tasks:
-                if task_service.update_task_release(tsk_cod, new_rel_id):
-                    count += 1
-            
-            ui_utils.show_success_message(f"Release {version} criada com {count} tarefas vinculadas!")
-            st.rerun()
-        else:
-            ui_utils.show_error_message(result)
+        if st.form_submit_button("📦 Fechar e Publicar Release", type="primary", use_container_width=True):
+            if not version or not title:
+                st.error("Versão e Título são obrigatórios.")
+            else:
+                # A) Cria a Release
+                success, rel_id_or_msg = rel_service.create_release(version, title, st.session_state['user']['UsrLgn'])
+                
+                if success:
+                    # B) Vincula todas as tarefas da lista à nova Release
+                    count = 0
+                    for _, row in df_ready.iterrows():
+                        if task_service.update_task_release(row['TrfCod'], rel_id_or_msg):
+                            count += 1
+                    
+                    st.success(f"Release {version} publicada! {count} tarefas vinculadas.")
+                    st.balloons()
+                    st.rerun()
+                else:
+                    st.error(rel_id_or_msg)

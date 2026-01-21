@@ -1,60 +1,58 @@
 import pandas as pd
 from src.models.DevModel import DevModel
 from src.models.UserProfileModel import UserProfileModel
+from src.core.database import Database
 
 class DevService:
     def get_all_devs_dataframe(self):
         """
-        Retorna um DataFrame consolidado utilizando apenas os Models (CrudMixin).
-        Realiza o 'Join' em memória usando Pandas.
+        Retorna DataFrame consolidado (T_Dev + T_UsrPrf).
+        Essencial para as telas de Tarefas (Dropdown) e Equipe (Cards).
         """
-        # 1. Busca dados brutos usando o padrão CrudMixin
-        dev_model = DevModel()
-        profile_model = UserProfileModel()
+        db = Database()
         
-        devs_data = dev_model.read_all()
-        profiles_data = profile_model.read_all()
-
-        # Se não houver devs, retorna DF vazio com as colunas esperadas
-        if not devs_data:
-            return pd.DataFrame(columns=['DevNme', 'UsrPrfCgo', 'UsrPrfBio', 'UsrPrfFto', 'UsrPrfUrl'])
-
-        # 2. Converte para DataFrames
-        df_devs = pd.DataFrame(devs_data)
-        df_profiles = pd.DataFrame(profiles_data)
-
-        # 3. Tratamento de Tipos para o Join (CORREÇÃO DO ERRO)
-        if not df_devs.empty:
-            # Garante que é numérico, coage erros para NaN
-            df_devs['DevUsrCod'] = pd.to_numeric(df_devs['DevUsrCod'], errors='coerce')
-            # Preenche Nulos com 0 para permitir a conversão para Int sem erro
-            df_devs['DevUsrCod'] = df_devs['DevUsrCod'].fillna(0).astype(int)
+        # Fazemos o JOIN diretamente via SQL para performance e simplicidade
+        sql = """
+            SELECT 
+                d.DevCod, d.DevNom, d.DevUsrCod,
+                p.UsrPrfCgo, p.UsrPrfBio, p.UsrPrfFto, p.UsrPrfUrl
+            FROM T_Dev d
+            LEFT JOIN T_UsrPrf p ON d.DevUsrCod = p.UsrPrfUsrCod
+            WHERE d.DevAudDlt IS NULL
+        """
+        
+        rows = db.select(sql)
+        
+        # Colunas esperadas no DataFrame
+        cols = ['DevCod', 'DevNom', 'DevUsrCod', 'UsrPrfCgo', 'UsrPrfBio', 'UsrPrfFto', 'UsrPrfUrl']
+        
+        if not rows:
+            return pd.DataFrame(columns=cols)
             
-        if not df_profiles.empty:
-            # Mesma proteção para o lado do Perfil
-            df_profiles['UsrPrfUsrCod'] = pd.to_numeric(df_profiles['UsrPrfUsrCod'], errors='coerce')
-            df_profiles['UsrPrfUsrCod'] = df_profiles['UsrPrfUsrCod'].fillna(0).astype(int)
+        return pd.DataFrame(rows, columns=cols)
+
+    def create_dev_from_user(self, user_id, user_name):
+        """
+        Promove um usuário a desenvolvedor (Cria registro em T_Dev).
+        """
+        try:
+            model = DevModel()
             
-            # MERGE: Devs + Perfil
-            df_merged = pd.merge(
-                df_devs, 
-                df_profiles, 
-                left_on='DevUsrCod', 
-                right_on='UsrPrfUsrCod', 
-                how='left'
-            )
-        else:
-            df_merged = df_devs
-            cols_perfil = ['UsrPrfCgo', 'UsrPrfBio', 'UsrPrfFto', 'UsrPrfUrl']
-            for col in cols_perfil:
-                df_merged[col] = None
+            # 1. Verifica se já existe (Inclusive deletados, se quiser reativar lógica futura)
+            # Por enquanto, verifica apenas ativos
+            exists = model.read_all(where="DevUsrCod = ?", params=(user_id,))
+            
+            if exists:
+                return True, "Este usuário já é um desenvolvedor."
 
-        # 4. Seleciona e Trata colunas finais
-        df_final = df_merged.fillna({
-            'UsrPrfCgo': 'Colaborador', # Ajuste no default
-            'UsrPrfBio': '',
-            'UsrPrfFto': '',
-            'UsrPrfUrl': ''
-        })
-
-        return df_final
+            # 2. Cria novo
+            model.DevUsrCod = user_id
+            model.DevNom = user_name
+            model.DevAudUsr = "system_admin" # Ou pegar da sessão se possível
+            
+            if model.save():
+                return True, f"{user_name} promovido a desenvolvedor com sucesso!"
+            return False, "Falha ao salvar registro em T_Dev."
+            
+        except Exception as e:
+            return False, f"Erro no serviço de desenvolvedores: {str(e)}"

@@ -1,9 +1,9 @@
 import sqlite3
 import os
-from src.core.database import get_connection
+from src.core.database import Database
 
 def run_migrations():
-    conn = get_connection()
+    conn = Database().get_connection()
     cursor = conn.cursor()
 
     # Cria tabela de controlo de versões

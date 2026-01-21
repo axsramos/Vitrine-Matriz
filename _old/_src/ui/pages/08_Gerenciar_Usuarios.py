@@ -68,6 +68,7 @@ df_users = user_service.get_all_users()
 if not df_users.empty:
     col_table, col_actions = st.columns([2, 1])
     
+    selected_usr_Cod = None
     selected_usr_login = None
     
     # 1. RENDERIZA A COLUNA DA DIREITA PRIMEIRO (Ações)
@@ -93,6 +94,7 @@ if not df_users.empty:
             btn_promote = st.button("👨‍💻 Tornar Desenvolvedor", use_container_width=True)
             if btn_promote:
                 success, msg = dev_service.create_dev_from_user(
+                    user_id=selected_user['UsrCod'],
                     user_name=selected_user['UsrNme'],
                     user_login=selected_user['UsrLgn']
                 )

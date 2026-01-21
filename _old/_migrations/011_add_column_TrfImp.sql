@@ -1,0 +1,1 @@
+ALTER TABLE T_Trf ADD TrfImp VARCHAR(50) DEFAULT 'Normal';

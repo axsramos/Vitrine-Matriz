@@ -1,41 +1,57 @@
 import sqlite3
-import os
 from src.core.config import Config
 
 class Database:
-    _connection = None
+    """
+    Gerenciador de conexão com o banco de dados.
+    Utiliza as configurações centralizadas de caminhos do Config.
+    """
+    
+    def __init__(self):
+        # Consome o caminho absoluto definido no config.py
+        self.db_path = Config.DB_STR_PATH
 
-    @staticmethod
-    def get_connection():
-        """
-        Retorna uma conexão Singleton com o banco de dados.
-        """
-        if Database._connection is None:
-            if Config.DB_DRIVER == "sqlite":
-                # check_same_thread=False é crucial para o Streamlit
-                Database._connection = sqlite3.connect(Config.DB_PATH, check_same_thread=False)
-                # Define a factory para retornar dicionários
-                Database._connection.row_factory = Database.dict_factory
+    def get_connection(self):
+        """Retorna uma conexão ativa com suporte a dicionários."""
+        try:
+            conn = sqlite3.connect(self.db_path)
+            # Permite acessar colunas pelo nome: row['UsrNom']
+            conn.row_factory = sqlite3.Row
+            return conn
+        except sqlite3.Error as e:
+            print(f"❌ Erro ao conectar ao SQLite ({self.db_path}): {e}")
+            return None
+
+    def execute(self, sql: str, params: tuple = ()) -> any:
+        """Executa comandos de escrita (INSERT, UPDATE, DELETE)."""
+        conn = self.get_connection()
+        if not conn: return None
         
-        return Database._connection
+        try:
+            cursor = conn.cursor()
+            cursor.execute(sql, params)
+            conn.commit()
+            # Retorna o ID gerado em caso de INSERT
+            return cursor.lastrowid if "INSERT" in sql.upper() else True
+        except sqlite3.Error as e:
+            print(f"❌ Erro na execução SQL: {e}\nQuery: {sql}")
+            return None
+        finally:
+            conn.close()
 
-    @staticmethod
-    def dict_factory(cursor, row):
-        """
-        Converte as linhas do banco (tuplas) em dicionários Python reais.
-        Permite acesso via row['NomeColuna'].
-        """
-        d = {}
-        for idx, col in enumerate(cursor.description):
-            d[col[0]] = row[idx]
-        return d
-
-    @staticmethod
-    def close_connection():
-        if Database._connection:
-            Database._connection.close()
-            Database._connection = None
-
-# Função auxiliar para manter compatibilidade com códigos antigos se necessário
-def get_connection():
-    return Database.get_connection()
+    def select(self, sql: str, params: tuple = ()) -> list:
+        """Executa consultas e retorna uma lista de dicionários."""
+        conn = self.get_connection()
+        if not conn: return []
+        
+        try:
+            cursor = conn.cursor()
+            cursor.execute(sql, params)
+            rows = cursor.fetchall()
+            # Converte sqlite3.Row para dict para compatibilidade total
+            return [dict(row) for row in rows]
+        except sqlite3.Error as e:
+            print(f"❌ Erro na consulta SQL: {e}")
+            return []
+        finally:
+            conn.close()

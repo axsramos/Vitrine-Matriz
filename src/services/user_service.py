@@ -1,49 +1,49 @@
-import pandas as pd
-from src.models import UserModel
-from src.services.auth_service import AuthService
+import hashlib
+from src.models.UserModel import UserModel
+from src.models.UserProfileModel import UserProfileModel
 
 class UserService:
-    def get_all_users(self):
-        # Usa o Mixin para buscar dados
-        data = UserModel.read_all()
-        df = pd.DataFrame(data)
-        if df.empty:
-            return pd.DataFrame(columns=UserModel.FIELDS)
-        return df
+    def _hash_password(self, password):
+        """Gera hash SHA256 para comparar com o banco."""
+        return hashlib.sha256(password.encode()).hexdigest()
+    
+    def login(self, username, password):
+        model = UserModel()
+        password_hash = self._hash_password(password)
+        
+        # Busca usuário ativo (UsrAudDlt IS NULL)
+        # Atenção: Usando UsrPrm se precisar validar permissão depois
+        users = model.read_all(
+            where="UsrLgn = ? AND UsrPwd = ? AND UsrAudDlt IS NULL", 
+            params=(username, password_hash)
+        )
+        
+        return users[0] if users else None
 
-    def create_user(self, name, username, password, role='User'):
-        try:
-            # Verifica se já existe
-            if UserModel.read_all(where="UsrLgn = ?", params=(username,)):
-                return False, f"O login '{username}' já está em uso."
-
-            # Hash da senha via AuthService
-            auth = AuthService()
-            pwd_hash = auth.hash_password(password)
-
-            # Cria Model
-            new_user = UserModel()
-            new_user.UsrNme = name
-            new_user.UsrLgn = username
-            new_user.UsrPwdHash = pwd_hash
-            new_user.UsrRle = role
+    def get_user_profile(self, user_id):
+        model = UserProfileModel()
+        profiles = model.read_all(where="UsrPrfUsrCod = ?", params=(user_id,))
+        return profiles[0] if profiles else {}
+    
+    def update_profile(self, user_id, profile_data: dict):
+        """Cria ou Atualiza o perfil."""
+        model = UserProfileModel()
+        
+        # Verifica se já existe
+        existing = model.read_all(where="UsrPrfUsrCod = ?", params=(user_id,))
+        
+        if existing:
+            # Atualiza objeto existente
+            current_data = existing[0]
+            model = UserProfileModel(**current_data)
             
-            if new_user.save():
-                return True, "Usuário criado com sucesso!"
-            return False, "Erro ao salvar no banco."
+            # Atualiza campos recebidos
+            for k, v in profile_data.items():
+                if hasattr(model, k):
+                    setattr(model, k, v)
+        else:
+            # Cria novo
+            model = UserProfileModel(**profile_data)
+            model.UsrPrfUsrCod = user_id
             
-        except Exception as e:
-            return False, f"Erro técnico: {str(e)}"
-
-    def delete_user(self, usr_cod):
-        # Implementação simples de exclusão física para este exemplo
-        # Em produção, idealmente seria Logic Delete (UsrAudDlt)
-        from src.core.database import Database
-        try:
-            conn = Database.get_connection()
-            cursor = conn.cursor()
-            cursor.execute(f"DELETE FROM {UserModel.TABLE_NAME} WHERE UsrCod = ?", (usr_cod,))
-            conn.commit()
-            return True, "Usuário excluído."
-        except Exception as e:
-            return False, str(e)
+        return model.save()
