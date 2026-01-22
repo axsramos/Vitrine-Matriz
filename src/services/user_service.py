@@ -3,6 +3,21 @@ from src.models.UserModel import UserModel
 from src.models.UserProfileModel import UserProfileModel
 
 class UserService:
+    def __init__(self):
+        self.model = UserModel()
+    
+    def get_all_users(self):
+        """
+        Retorna todos os utilizadores utilizando a lógica do CrudMixin.
+        """
+        try:
+            # O read_all do CrudMixin já trata a conexão e retorna a lista de dicts
+            # Podemos passar filtros ou ordenação se o seu Mixin suportar
+            return self.model.read_all() 
+        except Exception as e:
+            print(f"Erro ao ler utilizadores via Mixin: {e}")
+            return []
+
     def _hash_password(self, password):
         """Gera hash SHA256 para comparar com o banco."""
         return hashlib.sha256(password.encode()).hexdigest()

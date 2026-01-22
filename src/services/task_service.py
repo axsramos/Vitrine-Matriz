@@ -53,3 +53,14 @@ class TaskService:
             task_obj.TrfRelCod = release_id
             return task_obj.save()
         return False
+    
+    def mark_as_completed(self, trf_id):
+        """
+        Atualiza o status da tarefa para 'Concluído' via CrudMixin.
+        """
+        try:
+            # Usamos o ID da tarefa e passamos o novo valor para o campo TrfStt
+            return self.model.update(trf_id, TrfStt="Concluído")
+        except Exception as e:
+            print(f"Erro ao concluir tarefa: {e}")
+            return False

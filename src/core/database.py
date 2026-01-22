@@ -1,4 +1,5 @@
 import sqlite3
+import os
 from src.core.config import Config
 
 class Database:
@@ -10,12 +11,18 @@ class Database:
     def __init__(self):
         # Consome o caminho absoluto definido no config.py
         self.db_path = Config.DB_STR_PATH
+        
+        # Log de diagnóstico (Verifique isso no console!)
+        if not os.path.exists(self.db_path):
+            print(f"⚠️ AVISO: Banco de dados NÃO encontrado em: {self.db_path}")
+            print(f"CWD atual: {os.getcwd()}")
+        else:
+            print(f"✅ Conectado ao banco em: {self.db_path}")
 
     def get_connection(self):
         """Retorna uma conexão ativa com suporte a dicionários."""
         try:
-            conn = sqlite3.connect(self.db_path)
-            # Permite acessar colunas pelo nome: row['UsrNom']
+            conn = sqlite3.connect(self.db_path, check_same_thread=False)
             conn.row_factory = sqlite3.Row
             return conn
         except sqlite3.Error as e:

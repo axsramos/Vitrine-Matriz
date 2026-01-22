@@ -4,6 +4,9 @@ from src.models.UserProfileModel import UserProfileModel
 from src.core.database import Database
 
 class DevService:
+    def __init__(self):
+        self.db = Database()
+        
     def get_all_devs_dataframe(self):
         """
         Retorna DataFrame consolidado (T_Dev + T_UsrPrf).
@@ -30,6 +33,27 @@ class DevService:
             return pd.DataFrame(columns=cols)
             
         return pd.DataFrame(rows, columns=cols)
+    
+    def get_all_developers(self):
+        """
+        Busca desenvolvedores cruzando com a tabela de perfil redesenhada.
+        """
+        sql = """
+            SELECT 
+                d.DevCod, 
+                d.DevNom, 
+                p.UsrPrfBio as DevBio, 
+                p.UsrPrfFto as DevFto, 
+                p.UsrPrfUrl as DevLnk
+            FROM T_Dev d
+            LEFT JOIN T_UsrPrf p ON d.DevCod = p.UsrPrfCod
+            ORDER BY d.DevNom;
+        """
+        try:
+            return self.db.select(sql)
+        except Exception as e:
+            print(f"Erro ao buscar portfólios da equipe: {e}")
+            return []
 
     def create_dev_from_user(self, user_id, user_name):
         """
@@ -56,3 +80,36 @@ class DevService:
             
         except Exception as e:
             return False, f"Erro no serviço de desenvolvedores: {str(e)}"
+    
+    def check_if_exists(self, usr_cod):
+        """
+        Verifica a existência do Dev mantendo a integridade da sua estrutura.
+        """
+        # Garantimos que o usr_cod seja tratado como o tipo correto do banco (int)
+        try:
+            sql = "SELECT DevCod FROM T_Dev WHERE DevCod = ?"
+            # Usando o método select original da sua estrutura
+            result = self.db.select(sql, (int(usr_cod),))
+            
+            # Se a sua estrutura retorna uma lista de dicionários ou Rows:
+            return len(result) > 0
+        except (ValueError, TypeError):
+            # Caso o usr_cod chegue vazio ou em formato inválido
+            return False
+        except Exception as e:
+            # Log apenas para debug interno
+            print(f"Erro na verificação de Dev: {e}")
+            return False
+
+    def promote_to_developer(self, dev_data):
+        """
+        Insere o registro mantendo o padrão de execução da sua Database.
+        """
+        sql = "INSERT INTO T_Dev (DevCod, DevNom, DevAudUsr) VALUES (?, ?, ?)"
+        params = (
+            dev_data['DevCod'], 
+            dev_data['DevNom'], 
+            dev_data['DevAudUsr']
+        )
+        # Chamada ao método execute original da sua estrutura
+        return self.db.execute(sql, params)
