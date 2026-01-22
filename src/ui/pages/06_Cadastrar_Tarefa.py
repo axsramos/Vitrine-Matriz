@@ -64,74 +64,83 @@ with st.expander("➕ Nova Tarefa", expanded=True):
 
 st.divider()
 
-# # --- SEÇÃO 2: CONSULTA (TABELA) ---
-# st.subheader("📋 Consultar Registros")
-# df_tasks = task_service.get_all_tasks()
-
-# if not df_tasks.empty:
-#     # Filtro de busca simples na tabela
-#     search = st.text_input("Filtrar por título ou responsável", placeholder="Digite para buscar...")
-#     if search:
-#         mask = df_tasks['TrfTtl'].str.contains(search, case=False) | \
-#                df_tasks['DevNome'].str.contains(search, case=False)
-#         df_tasks = df_tasks[mask]
-
-#     st.dataframe(
-#         df_tasks,
-#         column_order=("TrfCod", "TrfTtl", "DevNome", "TrfPrio", "TrfStt", "TrfDatEnt"),
-#         column_config={
-#             "TrfCod": "ID",
-#             "TrfTtl": "Título",
-#             "DevNome": "Responsável",
-#             "TrfPrio": "Prioridade",
-#             "TrfStt": "Status",
-#             "TrfDatEnt": st.column_config.DateColumn("Prazo", format="DD/MM/YYYY")
-#         },
-#         hide_index=True,
-#         use_container_width=True
-#     )
-
 # --- SEÇÃO 2: MINHAS ATIVIDADES (OPÇÃO 2 - CHECKBOX/BULK) ---
 st.subheader("🚀 Minhas Atividades Pendentes")
 
 # Captura o código do usuário logado na sessão
 usr_logado = st.session_state['user']
+
 # Busca tarefas onde o desenvolvedor vinculado é o usuário logado
 minhas_trfs = task_service.get_tasks_by_dev(usr_logado['UsrCod'])
 
 if not minhas_trfs:
-    st.info("Você não possui tarefas pendentes no momento.")
+    st.info("Nenhuma tarefa pendente.")
 else:
-    df_minhas = pd.DataFrame(minhas_trfs)
+    for t in minhas_trfs:
+        with st.container(border=True):
+            col_info, col_btn_check, col_btn_del = st.columns([3, 1, 1])
+            
+            with col_info:
+                st.write(f"**{t['TrfTtl']}**")
+                status_cor = "🟢" if t['TrfStt'] == "Concluído" else "🟡"
+                st.caption(f"{status_cor} Status: {t['TrfStt']} | Impacto: {t['TrfImp']}")
+            
+            # --- BOTÃO CONCLUIR ---
+            with col_btn_check:
+                is_concluida = t['TrfStt'] == "Concluído"
+                if st.button("✅ Feito", key=f"check_{t['TrfCod']}", 
+                             disabled=is_concluida,
+                             use_container_width=True,
+                             help="Marcar tarefa como concluída"):
+                    if task_service.update_status(t['TrfCod'], "Concluído"):
+                        st.toast(f"Tarefa '{t['TrfTtl']}' concluída!", icon="🚀")
+                        st.rerun()
+
+            # --- BOTÃO EXCLUIR ---
+            with col_btn_del:
+                # Regra: Só exclui se NÃO tiver release (TrfRelCod is null)
+                pode_excluir = t.get('TrfRelCod') is None
+                if st.button("🗑️", key=f"del_{t['TrfCod']}", 
+                             disabled=not pode_excluir,
+                             use_container_width=True,
+                             help="Excluir (apenas tarefas sem versão)"):
+                    if task_service.delete_task(t['TrfCod']):
+                        st.success("Tarefa removida!")
+                        st.rerun()
+
+# if not minhas_trfs:
+#     st.info("Você não possui tarefas pendentes no momento.")
+# else:
+#     df_minhas = pd.DataFrame(minhas_trfs)
     
-    # Inserimos a coluna de seleção para o checkbox
-    df_minhas.insert(0, "Selecionar", False)
+#     # Inserimos a coluna de seleção para o checkbox
+#     df_minhas.insert(0, "Selecionar", False)
 
-    # Editor de dados para permitir a seleção de linhas
-    edited_df = st.data_editor(
-        df_minhas,
-        column_order=("Selecionar", "TrfTtl", "TrfPrio", "TrfDatEnt"),
-        column_config={
-            "Selecionar": st.column_config.CheckboxColumn("Finalizar?", help="Marque para concluir"),
-            "TrfTtl": "Tarefa",
-            "TrfPrio": "Prioridade",
-            "TrfDatEnt": st.column_config.DateColumn("Prazo", format="DD/MM/YYYY")
-        },
-        disabled=["TrfTtl", "TrfPrio", "TrfDatEnt"], # Impede edição acidental dos dados
-        hide_index=True,
-        use_container_width=True,
-        key="editor_minhas_tarefas"
-    )
+#     # Editor de dados para permitir a seleção de linhas
+#     edited_df = st.data_editor(
+#         df_minhas,
+#         column_order=("Selecionar", "TrfTtl", "TrfPrio", "TrfDatEnt"),
+#         column_config={
+#             "Selecionar": st.column_config.CheckboxColumn("Finalizar?", help="Marque para concluir"),
+#             "TrfTtl": "Tarefa",
+#             "TrfPrio": "Prioridade",
+#             "TrfDatEnt": st.column_config.DateColumn("Prazo", format="DD/MM/YYYY")
+#         },
+#         disabled=["TrfTtl", "TrfPrio", "TrfDatEnt"], # Impede edição acidental dos dados
+#         hide_index=True,
+#         use_container_width=True,
+#         key="editor_minhas_tarefas"
+#     )
 
-    # Identifica quais IDs foram marcados no checkbox
-    ids_to_finalize = edited_df[edited_df["Selecionar"] == True]["TrfCod"].tolist()
+#     # Identifica quais IDs foram marcados no checkbox
+#     ids_to_finalize = edited_df[edited_df["Selecionar"] == True]["TrfCod"].tolist()
 
-    if ids_to_finalize:
-        col_btn, _ = st.columns([1, 2])
-        if col_btn.button(f"🏁 Concluir {len(ids_to_finalize)} Item(ns)", type="primary", use_container_width=True):
-            if task_service.finalize_tasks_bulk(ids_to_finalize, usr_logado['UsrLgn']):
-                st.toast("Atividades concluídas!", icon="✅")
-                st.rerun()
+#     if ids_to_finalize:
+#         col_btn, _ = st.columns([1, 2])
+#         if col_btn.button(f"🏁 Concluir {len(ids_to_finalize)} Item(ns)", type="primary", use_container_width=True):
+#             if task_service.finalize_tasks_bulk(ids_to_finalize, usr_logado['UsrLgn']):
+#                 st.toast("Atividades concluídas!", icon="✅")
+#                 st.rerun()
 
 st.divider()
 

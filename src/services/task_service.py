@@ -98,3 +98,33 @@ class TaskService:
         except Exception as e:
             print(f"Erro ao finalizar em massa: {e}")
             return False
+    
+    def delete_task(self, task_id):
+        """
+        Realiza a exclusão de uma tarefa.
+        Nota: O CrudMixin geralmente executa um 'Soft Delete' 
+        (preenche o campo TrfAudDlt) para manter a integridade dos dados.
+        """
+        try:
+            # 1. Instanciamos o modelo com a chave primária
+            task = TaskModel(TrfCod=task_id)
+            
+            # 2. Chamamos o método delete herdado do CrudMixin
+            # Este método usará o TrfCod para localizar e remover/desativar o registo
+            return task.delete()
+        except Exception as e:
+            print(f"Erro ao excluir tarefa {task_id}: {e}")
+            return False
+
+    def update_status(self, task_id, novo_status):
+        """
+        Atualiza o status de uma tarefa específica.
+        """
+        try:
+            # Instancia o modelo com o ID e define o novo status
+            task = TaskModel(TrfCod=task_id)
+            task.TrfStt = novo_status
+            return task.save() # O CrudMixin tratará o UPDATE no banco
+        except Exception as e:
+            print(f"Erro ao atualizar tarefa: {e}")
+            return False

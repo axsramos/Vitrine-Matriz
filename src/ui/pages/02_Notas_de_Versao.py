@@ -38,19 +38,36 @@ with tab_padrao:
 
 # --- ABA 2: VISUALIZAÇÃO POR MÊS/ANO ---
 with tab_periodo:
-    df_validos = df_rel[df_rel['RelDat'].notnull()].copy()
+    # 1. Garantimos que RelDat seja datetime e removemos NaT (Not a Time)
+    df_rel['RelDat'] = pd.to_datetime(df_rel['RelDat'], errors='coerce')
+    df_validos = df_rel.dropna(subset=['RelDat']).copy()
     
     if df_validos.empty:
         st.warning("Sem datas válidas para agrupamento.")
     else:
-        df_validos['MesAno'] = df_validos['RelDat'].dt.strftime('%Y-%m')
-        for mes in df_validos['MesAno'].unique():
-            data_ref = df_validos[df_validos['MesAno'] == mes]['RelDat'].iloc[0]
-            st.subheader(f"🗓️ {data_ref.strftime('%B / %Y').capitalize()}")
+        # 2. Criamos a chave de agrupamento (Ano-Mês para ordenação correta)
+        df_validos['MesAnoKey'] = df_validos['RelDat'].dt.to_period('M')
+        
+        # 3. Ordenamos para que os meses mais recentes apareçam primeiro
+        meses_ordenados = sorted(df_validos['MesAnoKey'].unique(), reverse=True)
+
+        for mes in meses_ordenados:
+            # Filtramos as releases deste mês específico
+            subset = df_validos[df_validos['MesAnoKey'] == mes]
             
-            subset = df_validos[df_validos['MesAno'] == mes]
+            # Exibição do Header do Mês (Ex: DEZEMBRO / 2025)
+            nome_mes = subset['RelDat'].iloc[0].strftime('%B / %Y').upper()
+            st.subheader(f"🗓️ {nome_mes}")
+            
             for _, row in subset.iterrows():
-                # Linha resumida para visualização mensal
-                st.markdown(f"**{row['RelVrs']}** ({row['RelDat'].strftime('%d/%m')}) — `{row['QtdTarefas']} tarefa(s)` por: *{row['Desenvolvedores']}*")
-                st.caption(f"📝 {row['RelTtlCmm']}")
+                devs = row['Desenvolvedores'] if row['Desenvolvedores'] else "Equipe"
+                qtd = row['QtdTarefas']
+                
+                # Card resumido da release
+                with st.container(border=True):
+                    c1, c2 = st.columns([1, 4])
+                    c1.metric("Versão", row['RelVrs'])
+                    with c2:
+                        st.markdown(f"**{row['RelTtlCmm'] or 'Sem título'}**")
+                        st.caption(f"📅 {row['RelDat'].strftime('%d/%m/%Y')} | 👥 {devs} | 📊 {qtd} tarefas")
             st.divider()

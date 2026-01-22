@@ -46,7 +46,7 @@ class DevService:
                 p.UsrPrfFto as DevFto, 
                 p.UsrPrfUrl as DevLnk
             FROM T_Dev d
-            LEFT JOIN T_UsrPrf p ON d.DevCod = p.UsrPrfCod
+            LEFT JOIN T_UsrPrf p ON d.DevUsrCod = p.UsrPrfUsrCod
             WHERE d.DevAudDlt IS NULL
             ORDER BY d.DevNom;
         """

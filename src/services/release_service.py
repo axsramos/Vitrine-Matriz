@@ -1,6 +1,7 @@
 import pandas as pd
 from src.models.ReleaseModel import ReleaseModel
 from src.core.database import Database
+from datetime import datetime
 
 class ReleaseService:
     def __init__(self):
@@ -20,6 +21,7 @@ class ReleaseService:
             model.RelVrs = version
             model.RelTtlCmm = title
             model.RelAudUsr = user_audit
+            model.RelDat = datetime.now().strftime('%Y-%m-%d')
             
             if model.save():
                 # Retorna ID recém criado para vincular tarefas
