@@ -33,7 +33,8 @@ def render_navigation():
     # Páginas Públicas (Sempre visíveis)
     nav_structure = {
         "📊 Dashboard": [
-            st.Page("src/ui/pages/00_Home.py", title="Visão Geral", icon="🏠", default=True),
+            # st.Page("src/ui/pages/00_Home.py", title="Visão Geral", icon="🏠", default=True),
+            st.Page("src/ui/pages/01_Dashboard.py", title="Dashboard", icon="🏠", default=True),
         ],
         "🔍 Consultas": [
             st.Page("src/ui/pages/02_Notas_de_Versao.py", title="Notas de Versão", icon="📜"),
