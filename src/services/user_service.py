@@ -62,3 +62,63 @@ class UserService:
             model.UsrPrfUsrCod = user_id
             
         return model.save()
+    
+    def create_user(self, login, nome, senha, permissao):
+        """
+        Cria um novo usuário utilizando o método .save() do CrudMixin.
+        """
+        try:
+            # Em vez de passar um dicionário para um método create(), 
+            # alimentamos os atributos do objeto conforme definido no CrudMixin
+            new_user = UserModel()
+            new_user.UsrLgn = login
+            new_user.UsrNom = nome
+            new_user.UsrPwd = self._hash_password(senha)
+            new_user.UsrPrm = permissao
+            new_user.UsrAudUsr = "admin"
+            
+            # O .save() identifica que a PK está nula e executa o INSERT
+            if new_user.save():
+                return True, "Usuário cadastrado com sucesso!"
+            return False, "Falha ao salvar usuário no banco."
+            
+        except Exception as e:
+            return False, f"Erro no UserService: {str(e)}"
+
+    def update_user_permission(self, usr_id, new_role):
+        """Atualiza a permissão buscando o objeto e salvando a alteração."""
+        try:
+            if self.model.read_by_field("UsrCod", usr_id): # Usa o método do seu Mixin
+                self.model.UsrPrm = new_role
+                return self.model.save()
+            return False
+        except Exception as e:
+            print(f"Erro ao atualizar permissão: {e}")
+            return False
+            
+    def get_user_by_id(self, usr_id):
+        # Utiliza o read_all com filtro conforme seu Mixin
+        res = self.model.read_all(where="UsrCod = ?", params=(usr_id,))
+        return res[0] if res else None
+    
+    def reset_password(self, usr_id):
+        """
+        Define a senha do usuário para o padrão '123' com criptografia.
+        """
+        try:
+            # 1. Busca o registro atual
+            results = self.model.read_all(where="UsrCod = ?", params=(usr_id,))
+            if results:
+                # 2. Carrega no objeto do Model para o Mixin entender que é um UPDATE
+                user_obj = UserModel(**results[0])
+                
+                # 3. Aplica o hash no valor padrão '123'
+                # Certifique-se de que o método _hash_password está definido na classe
+                user_obj.UsrPwd = self._hash_password("123")
+                
+                # 4. Persiste no banco
+                return user_obj.save()
+            return False
+        except Exception as e:
+            print(f"Erro ao renovar senha: {e}")
+            return False

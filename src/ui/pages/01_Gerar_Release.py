@@ -12,6 +12,11 @@ st.write("Consolide as tarefas concluídas em uma nova versão oficial do sistem
 rel_service = ReleaseService()
 task_service = TaskService()
 
+versao_atual = rel_service.get_latest_version_label()
+
+st.info(f"📢 **Versão Atual:** {versao_atual}")
+st.divider()
+
 # 1. Busca tarefas prontas (Concluídas e sem Release)
 df_ready = task_service.get_all_tasks_filtered(where="t.TrfStt = 'Concluído' AND t.TrfRelCod IS NULL")
 

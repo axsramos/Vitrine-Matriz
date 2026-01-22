@@ -103,13 +103,26 @@ class DevService:
 
     def promote_to_developer(self, dev_data):
         """
-        Insere o registro mantendo o padrão de execução da sua Database.
+        Insere em T_Dev e eleva permissão para manager caso não seja admin.
         """
+        from src.services.user_service import UserService
+        u_service = UserService()
+        
+        # Query manual como você prefere para esta ação específica
         sql = "INSERT INTO T_Dev (DevCod, DevNom, DevAudUsr) VALUES (?, ?, ?)"
-        params = (
-            dev_data['DevCod'], 
-            dev_data['DevNom'], 
-            dev_data['DevAudUsr']
-        )
-        # Chamada ao método execute original da sua estrutura
-        return self.db.execute(sql, params)
+        params = (dev_data['DevCod'], dev_data['DevNom'], dev_data['DevAudUsr'])
+        
+        try:
+            if self.db.execute(sql, params):
+                # Busca o usuário para validar a regra de negócio
+                user = u_service.get_user_by_id(dev_data['DevCod'])
+                
+                # Regra: Promover a manager se não for administrador
+                if user and user.get('UsrPrm') != 'admin':
+                    u_service.update_user_permission(dev_data['DevCod'], 'manager')
+                    
+                return True
+            return False
+        except Exception as e:
+            print(f"Erro na promoção: {e}")
+            return False

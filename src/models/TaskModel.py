@@ -35,3 +35,21 @@ class TaskModel(CrudMixin, TrfMD):
             sql += f" AND ({where})"
             
         return db.select(sql, params)
+    
+    def finalize_multiple_tasks(self, task_ids, auditoria_usr):
+        """
+        Finaliza uma lista de tarefas em massa.
+        """
+        try:
+            for trf_id in task_ids:
+                # Buscamos o objeto via Mixin para garantir auditoria
+                res = self.model.read_all(where="TrfCod = ?", params=(trf_id,))
+                if res:
+                    task_obj = TrfModel(**res[0])
+                    task_obj.TrfStt = "Concluído"
+                    task_obj.TrfAudUsr = auditoria_usr
+                    task_obj.save() # O Mixin cuidará do UPDATE e AudUpd
+            return True
+        except Exception as e:
+            print(f"Erro ao finalizar tarefas: {e}")
+            return False

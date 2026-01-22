@@ -29,3 +29,8 @@ class ReleaseService:
         data = model.read_all(where="RelAudDlt IS NULL ORDER BY RelCod DESC")
         if not data: return pd.DataFrame(columns=model.FIELDS)
         return pd.DataFrame(data)
+    
+    def get_latest_version_label(self):
+        releases = self.get_all_releases()
+        v_atual = releases.iloc[0]['RelVrs'] if not releases.empty else "N/A"
+        return v_atual
