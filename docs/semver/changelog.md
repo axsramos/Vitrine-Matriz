@@ -35,6 +35,24 @@ Segurança: Em caso de vulnerabilidades.
 
 ---
 
+## [0.4.0](./v0.4.0/whatsnew.md) - 22/01/2026
+### Identidade Visual e Inteligência Analítica
+#### Adicionado:
+- **Nova Interface Cyber-Tech:** Implementação de Dark Mode profundo com paleta de cores neon (#00FF01) e degradês dinâmicos.
+- **Dashboard Evoluído:** Gráficos interativos (Altair) para carga de trabalho por dev e status de atividades.
+- **KPIs de Saúde:** Indicadores em tempo real para tarefas em atraso, taxa de conclusão e última release.
+- **Navegação Inteligente:** Changelog com visualização por abas (Histórico vs. Mensal) e rastreabilidade de desenvolvedores por versão.
+- **Gestão de Perfil:** Funcionalidade de promoção de usuários para o nível "Desenvolvedor" com criação automática de perfil técnico.
+
+#### Modificado:
+- **Estrutura de Release:** Refatoração completa da tabela `T_Rel` para suporte a campos de data e títulos comunicativos padronizados.
+- **Portfólio em Grid:** Exibição da equipe otimizada para duas colunas, melhorando a densidade de informação.
+- **Service Layer:** Expansão dos serviços de Dashboard e Release para suportar queries analíticas complexas.
+
+#### Corrigido:
+- **Estabilidade de Datas:** Tratamento de erro para registros sem data informada (*NaTType*) nas notas de versão.
+- **Integridade Referencial:** Correção no vínculo entre tarefas e releases no momento da finalização em massa.
+
 ## [0.3.0](./v0.3.0/whatsnew.md) - 15/01/2026 
 ### Ferramentas de Gestão Estratégica
 #### Adicionado:

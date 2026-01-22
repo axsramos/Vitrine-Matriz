@@ -1,3 +1,6 @@
+
+/*
+-- // opcional // --
 -- 1. Inserir uma Release (Ajustado para T_Rel conforme setup)
 INSERT INTO T_Rel (RelVrs, RelDat, RelTtlCmm, RelAudUsr, RelAudIns) 
 VALUES ('1.0.5', date('now', '-2 days'), 'Versão de Estabilidade e Dashboard', 'admin', datetime('now'));
@@ -22,3 +25,5 @@ VALUES ('Modelagem do Banco', 'Criação do DER', 'Alta', 'Concluído', date('no
 
 INSERT INTO T_Trf (TrfTtl, TrfDesc, TrfPrio, TrfStt, TrfDatEnt, TrfDevCod, TrfAudUsr, TrfAudIns)
 VALUES ('Configuração do Servidor', 'Setup AWS', 'Média', 'Concluído', date('now', '-8 days'), 2, 'admin', datetime('now'));
+*/
+

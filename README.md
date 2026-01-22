@@ -2,8 +2,8 @@
 **Portal de Transparência, Performance e Gestão de Releases.**
 
 <img src="https://img.shields.io/badge/license-MIT-green"><img/>
-<img src="https://img.shields.io/badge/version-0.3.0-blue"><img/>
-<img src="https://img.shields.io/badge/biuld-2601152051-orange"><img/>
+<img src="https://img.shields.io/badge/version-0.4.0-blue"><img/>
+<img src="https://img.shields.io/badge/biuld-2026012215-orange"><img/>
 
 Ver mais em [Changelog](./docs/semver/changelog.md)
 

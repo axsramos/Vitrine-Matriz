@@ -20,7 +20,7 @@ versao_txt = last_rel.get('RelVrs', 'N/A')
 data_txt = last_rel.get('RelDat', 'N/A')
 
 st.markdown(f"""
-<div style='background-color: #ccc; padding: 10px; border-radius: 5px; margin-bottom: 20px;'>
+<div style='background-color: #3D3D55; padding: 10px; border-radius: 5px; margin-bottom: 20px;'>
     🚀 <b>Versão em Produção:</b> {versao_txt} 
     <span style='float:right; color: #666;'>📅 Publicado em: {data_txt}</span>
 </div>

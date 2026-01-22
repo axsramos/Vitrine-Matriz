@@ -47,6 +47,7 @@ class DevService:
                 p.UsrPrfUrl as DevLnk
             FROM T_Dev d
             LEFT JOIN T_UsrPrf p ON d.DevCod = p.UsrPrfCod
+            WHERE d.DevAudDlt IS NULL
             ORDER BY d.DevNom;
         """
         try:

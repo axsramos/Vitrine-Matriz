@@ -53,8 +53,9 @@ else:
             is_dev = dev_service.check_if_exists(u['UsrCod'])
             if not is_dev:
                 if btn_col1.button("🚀 Dev", key=f"prom_{u['UsrCod']}", help="Tornar Desenvolvedor"):
-                    # Lógica de promoção já implementada...
-                    pass
+                    dev_service.create_dev_from_user(u['UsrCod'], u['UsrNom'])
+                    st.toast(f"Usuário {u['UsrNom']} promovido a Desenvolvedor!", icon="🚀")
+                    st.rerun()
             else:
                 btn_col1.button("🔍 Ver", key=f"det_{u['UsrCod']}", disabled=True)
 
