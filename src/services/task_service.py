@@ -118,13 +118,24 @@ class TaskService:
 
     def update_status(self, task_id, novo_status):
         """
-        Atualiza o status de uma tarefa específica.
+        Atualização alternativa via SQL Direto para contornar problemas de persistência.
         """
         try:
-            # Instancia o modelo com o ID e define o novo status
-            task = TaskModel(TrfCod=task_id)
-            task.TrfStt = novo_status
-            return task.save() # O CrudMixin tratará o UPDATE no banco
+            # 1. Pegamos o usuário logado para auditoria
+            user_lgn = st.session_state.get('user_lgn', 'system')
+            
+            # 2. Preparamos a query SQL direta
+            # Atualizamos o status e o usuário de auditoria
+            sql = """
+                UPDATE T_Trf 
+                SET TrfStt = ?, 
+                    TrfAudUsr = ? 
+                WHERE TrfCod = ?
+            """
+            params = (novo_status, user_lgn, task_id)
+            # 3. Executamos via self.db (Database)
+            self.db.execute(sql, params)
+            return True
         except Exception as e:
-            print(f"Erro ao atualizar tarefa: {e}")
+            print(f"Erro ao atualizar status via SQL: {e}")
             return False

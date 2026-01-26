@@ -1,0 +1,25 @@
+<div style="margin-bottom: 25px; padding-bottom: 15px; border-bottom: 1px solid #f1f1f1;">
+    <div style="display: flex; justify-content: space-between;">
+        <span
+            style="background-color: #0D0D2B; color: #00FF01; padding: 3px 10px; border-radius: 4px; font-size: 10pt; font-weight: bold;">
+            v{{ RelVrs }}
+        </span>
+        <span style="color: #6c757d; font-size: 9pt; float: right;">Publicado em {{ RelDat }}</span>
+    </div>
+
+    <div style="margin-top: 10px; color: #212529; font-size: 13pt; font-weight: bold;">
+        {{ RelTtlCmm }}
+    </div>
+
+    <div style="margin-top: 8px; color: #495057; font-size: 10pt;">
+        <i style="color: #00FF01;">&bull;</i> <b>Responsáveis:</b> {{ Desenvolvedores }}
+    </div>
+
+    <div
+        style="margin-top: 10px; background-color: #fcfcfc; padding: 10px; border-radius: 5px; border-left: 3px solid #dee2e6;">
+        <div style="font-size: 9pt; font-weight: bold; color: #0D0D2B; margin-bottom: 5px;">TAREFAS CONCLUÍDAS:</div>
+        <div style="font-size: 9pt; color: #333333; line-height: 1.4;">
+            {{ ItensLista }}
+        </div>
+    </div>
+</div>

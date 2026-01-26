@@ -88,13 +88,16 @@ else:
             # --- BOTÃO CONCLUIR ---
             with col_btn_check:
                 is_concluida = t['TrfStt'] == "Concluído"
-                if st.button("✅ Feito", key=f"check_{t['TrfCod']}", 
-                             disabled=is_concluida,
-                             use_container_width=True,
-                             help="Marcar tarefa como concluída"):
+                # Trocado use_container_width por width='stretch' para eliminar o warning
+                if st.button("✅ Feito", key=f"chk_{t['TrfCod']}", 
+                            disabled=is_concluida,
+                            width='stretch'): 
+                    
                     if task_service.update_status(t['TrfCod'], "Concluído"):
-                        st.toast(f"Tarefa '{t['TrfTtl']}' concluída!", icon="🚀")
-                        st.rerun()
+                        st.toast("Status atualizado!")
+                        st.rerun() # OBRIGATÓRIO para a tela ler o novo status do banco
+                    else:
+                        st.error("Erro ao persistir status.")
 
             # --- BOTÃO EXCLUIR ---
             with col_btn_del:

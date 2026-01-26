@@ -4,7 +4,7 @@ from src.core.ui_utils import load_avatar
 from src.core.auth_middleware import require_auth
 
 # Proteção de acesso
-require_auth()
+# require_auth()
 
 st.title("👥 Time de Desenvolvedores")
 st.write("Conheça os especialistas por trás do ecossistema Vitrine-Matriz.")
