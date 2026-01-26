@@ -9,7 +9,6 @@ def render_navigation():
     # --- PARTE 1: Identidade e Sessão (Topo) ---
     with st.sidebar:
         if user:
-            # Pega o primeiro nome do usuário
             nome_completo = user.get('UsrNom', 'Usuário')
             primeiro_nome = nome_completo.split()[0]
             
@@ -24,25 +23,32 @@ def render_navigation():
             st.caption("Acesse sua conta para gerenciar tarefas.")
             
             if st.button("🔑 Login", use_container_width=True, type="primary"):
-                # Se a página de Login não estiver no menu fixo, você pode usar switch_page
+                # Agora o switch_page funcionará porque a página está registrada abaixo
                 st.switch_page("src/ui/pages/Login.py")
 
         st.divider()
 
     # --- PARTE 2: Estrutura do Menu ---
-    # Páginas Públicas (Sempre visíveis)
+    
+    # 2.1 Páginas Públicas (Sempre visíveis)
     nav_structure = {
         "📊 Dashboard": [
-            # st.Page("src/ui/pages/00_Home.py", title="Visão Geral", icon="🏠", default=True),
             st.Page("src/ui/pages/01_Dashboard.py", title="Dashboard", icon="🏠", default=True),
         ],
         "🔍 Consultas": [
             st.Page("src/ui/pages/02_Notas_de_Versao.py", title="Notas de Versão", icon="📜"),
+            st.Page("src/ui/pages/04_Relatorios.py", title="Relatórios", icon="📊"),
             st.Page("src/ui/pages/03_Portfolio_Equipe.py", title="Time de Devs", icon="👥"),
         ]
     }
 
-    # Páginas Privadas (Apenas para logados)
+    # 2.2 Páginas de Acesso (Login só aparece se não estiver logado)
+    if not user:
+        nav_structure["Acesso"] = [
+            st.Page("src/ui/pages/Login.py", title="Login", icon="🔑")
+        ]
+
+    # 2.3 Páginas Privadas (Apenas para logados)
     if user:
         nav_structure["⚙️ Operacional"] = [
             st.Page("src/ui/pages/06_Cadastrar_Tarefa.py", title="Gestão de Tarefas", icon="📝"),
@@ -56,13 +62,8 @@ def render_navigation():
         if user_role == 'admin':
             nav_structure["🛠️ Administração"] = [
                 st.Page("src/ui/pages/05_Gerenciar_Usuarios.py", title="Usuários", icon="👥"),
-                st.Page("src/ui/pages/08_Configuracoes.py", title="Configurações", icon="🔧"),
             ]
-    else:
-        # Se visitante, garante que o Login esteja no menu para navegação fluida
-        nav_structure["🔑 Acesso"] = [
-            st.Page("src/ui/pages/Login.py", title="Entrar no Sistema", icon="🔓")
-        ]
 
-    # --- PASSO 3: Retorno do Objeto ---
-    return st.navigation(nav_structure)
+    # 3. Renderiza a navegação e RETORNA o objeto para o app.py
+    pg = st.navigation(nav_structure)
+    return pg
