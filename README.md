@@ -2,14 +2,14 @@
 **Portal de Transparência, Performance e Gestão de Releases.**
 
 <img src="https://img.shields.io/badge/license-MIT-green"><img/>
-<img src="https://img.shields.io/badge/version-0.4.0-blue"><img/>
-<img src="https://img.shields.io/badge/biuld-2026012215-orange"><img/>
+<img src="https://img.shields.io/badge/version-5.0.0-blue"><img/>
+<img src="https://img.shields.io/badge/build-202601270748-orange"><img/>
 
 Ver mais em [Changelog](./docs/semver/changelog.md)
 
 ---
 
-O **Vitrine Matriz** é uma aplicação desenvolvida em Python e Streamlit projetada para gerenciar o portfólio técnico da equipe de desenvolvimento do **Portal Matriz**, consolidar notas de versão (Releases) e gerar relatórios de impacto de negócio para a diretoria.
+O **Vitrine Matriz** é uma aplicação desenvolvida em Python e Streamlit projetada para gerenciar o portfólio técnico da equipe de desenvolvimento do **Portal Matriz**, consolidar notas de versão (Releases) e gerar relatórios executivos para a diretoria.
 
 ---
 
@@ -17,20 +17,21 @@ O **Vitrine Matriz** é uma aplicação desenvolvida em Python e Streamlit proje
 
 - **Dashboard Estratégico:** Visão geral de entregas, releases e roadmap futuro.
 - **Portfólio da Equipe:** Perfis detalhados com fotos, biografia e histórico de entregas.
-- **Gestão de Releases:** Agrupamento de tarefas em versões oficiais com títulos comunicativos.
-- **Lançamento de Tarefas:** Cadastro manual de entregas (contingência) com foco no **Impacto de Negócio**.
-- **Relatórios em PDF:** Geração automática de Notas de Versão e Relatórios de Performance da Equipe (Consolidado).
+- **Gestão de Releases:** Agrupamento de tarefas em versões oficiais com títulos comunicativos e sugestão automática de versão.
+- **Central de Relatórios:** Módulo dedicado para geração de documentos oficiais (Geral e Mensal) em PDF com filtros de período.
+- **Navegação Dinâmica:** Sistema de rotas inteligente com controle de acesso por perfil (Admin/User).
 - **Backlog Dinâmico:** Roadmap de desenvolvimento lido diretamente de arquivos Markdown.
 
 ---
 
-## 🏗️ Arquitetura e Tecnologias
+## 💻 Tecnologias Utilizadas
 
-- **Linguagem:** Python 3.12+
-- **Framework Web:** [Streamlit](https://docs.streamlit.io/)
-- **Banco de Dados:** SQLite (com suporte a auditoria `AudIns`, `AudUpd`, `AudDlt`)
-- **Geração de PDF:** [FPDF2](https://fpdf2.github.io/fpdf2/)
+- **Linguagem:** [Python 3.12+](https://www.python.org/)
+- **Interface:** [Streamlit](https://streamlit.io/)
+- **Banco de Dados:** SQLite (com Mixins para persistência)
+- **Motor de PDF:** [FPDF2](https://fpdf2.github.io/fpdf2/) (Suporte a renderização direta e HTML)
 - **Manipulação de Dados:** Pandas
+- **Ambiente de Desenvolvimento:** Laragon (Windows)
 - **Editor:** VS Code
 
 ---
@@ -49,11 +50,14 @@ Vitrine-Matriz/
 ├── src/
 │   ├── core/             # Conexão DB, Configurações e Mixins
 │   ├── models/           # Classes de domínio (ORM-like)
+│   ├── reports/
+│   │   └── templates/    # Templates HTML para geração de PDFs
 │   ├── services/         # Lógica de negócio e acesso a dados
 │   └── ui/
-│       └── pages/        # Telas da aplicação
-└── app.py                # Ponto de entrada e orquestração de navegação
-```
+│       ├── navigation.py # Orquestrador de menus e rotas
+│       └── pages/        # Telas da aplicação (Dashboard, Relatórios, etc.)
+└── app.py                # Ponto de entrada da aplicação
+---
 
 🔧 Configuração Inicial
 1. Clone o repositório:
@@ -84,8 +88,7 @@ python seed_db.py
 streamlit run app.py
 ```
 
+© 2026 Vitrine-Matriz - Desenvolvido para gestão ágil e transparência técnica.
+
 👨‍💻 Desenvolvido por:
 Alex Ramos - GitHub: axsramos
-
-Site Profissional: portalsiti.com.br
-
