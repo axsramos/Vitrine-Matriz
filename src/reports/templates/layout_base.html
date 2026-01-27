@@ -1,23 +1,6 @@
-<div style="background-color: #f8f9fa; padding: 25px; font-family: 'Helvetica', sans-serif;">
-    <div style="background-color: #ffffff; padding: 20px; border-bottom: 4px solid #00FF01; margin-bottom: 30px;">
-        <table width="100%">
-            <tr>
-                <td style="font-size: 22pt; font-weight: bold; color: #0D0D2B;">
-                    VITRINE<span style="color: #00FF01;">MATRIZ</span>
-                </td>
-                <td align="right" style="color: #6c757d; font-size: 9pt; text-transform: uppercase; font-weight: bold;">
-                    Notas de Versao Oficiais<br>
-                    {{ DataHoje }}
-                </td>
-            </tr>
-        </table>
-    </div>
-
-    <div style="background-color: #ffffff; padding: 20px; border: 1px solid #dee2e6; min-height: 600px;">
-        {{ Conteudo }}
-    </div>
-
-    <div style="margin-top: 20px; text-align: center; color: #adb5bd; font-size: 8pt;">
-        Gerado automaticamente pela plataforma Vitrine-Matriz &bull; Documento Interno e Confidencial
-    </div>
+<div style="font-family: Helvetica; padding: 20px;">
+    <h1 style="color: #0D0D2B;">VITRINE MATRIZ</h1>
+    <p style="color: #666666;">Relatorio Gerado em: {{ DataHoje }}</p>
+    <hr>
+    <div>{{ Conteudo }}</div>
 </div>

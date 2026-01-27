@@ -3,53 +3,36 @@ import pandas as pd
 from src.services.release_service import ReleaseService
 from datetime import datetime
 
-st.set_page_config(page_title="Central de Relatórios", page_icon="📊")
-
-st.title("📊 Central de Relatórios")
-st.markdown("Selecione o relatório desejado para gerar o documento oficial em PDF.")
+st.title("📊 Relatórios de Versão")
 
 rel_service = ReleaseService()
-data = rel_service.get_release_details()
+data = rel_service.get_release_details() # MESMA FUNÇÃO DA TELA DE NOTAS
 
-if not data:
-    st.warning("Não há dados suficientes para gerar relatórios.")
-    st.stop()
+if data:
+    df = pd.DataFrame(data)
+    df['RelDat'] = pd.to_datetime(df['RelDat'])
 
-df = pd.DataFrame(data)
-df['RelDat'] = pd.to_datetime(df['RelDat'], errors='coerce')
+    MESES_PT = {
+        1: "Janeiro", 2: "Fevereiro", 3: "Março", 4: "Abril", 5: "Maio", 6: "Junho",
+        7: "Julho", 8: "Agosto", 9: "Setembro", 10: "Outubro", 11: "Novembro", 12: "Dezembro"
+    }
 
-MESES_PT = {
-    1: "Janeiro", 2: "Fevereiro", 3: "Março", 4: "Abril", 5: "Maio", 6: "Junho",
-    7: "Julho", 8: "Agosto", 9: "Setembro", 10: "Outubro", 11: "Novembro", 12: "Dezembro"
-}
+    col1, col2 = st.columns(2)
 
-col1, col2 = st.columns(2)
+    with col1:
+        with st.container(border=True):
+            st.subheader("Histórico Geral")
+            st.write("Relatório detalhado por ordem cronológica.")
+            pdf_g = rel_service.export_pdf_geral_direto(df)
+            if pdf_g:
+                st.download_button("📥 Baixar Geral", pdf_g, "geral.pdf", "application/pdf", key="g", use_container_width=True)
 
-with col1:
-    with st.container(border=True):
-        st.subheader("Notas de Versão Geral")
-        st.write("Exibe o histórico completo de lançamentos de forma cronológica.")
-        pdf_geral = rel_service.export_pdf_geral(df)
-        if pdf_geral:
-            st.download_button(
-                label="📄 Gerar PDF Geral",
-                data=pdf_geral,
-                file_name=f"notas_versao_geral_{datetime.now().strftime('%Y%m%d')}.pdf",
-                mime="application/pdf",
-                width='stretch'
-            )
-
-with col2:
-    with st.container(border=True):
-        st.subheader("Notas de Versão Mensal")
-        st.write("Agrupa as entregas por Mês e Ano para visão gerencial.")
-        df_v = df.dropna(subset=['RelDat']).copy()
-        pdf_mensal = rel_service.export_pdf_mensal(df_v, MESES_PT)
-        if pdf_mensal:
-            st.download_button(
-                label="🗓️ Gerar PDF Mensal",
-                data=pdf_mensal,
-                file_name=f"notas_versao_mensal_{datetime.now().strftime('%Y%m%d')}.pdf",
-                mime="application/pdf",
-                width='stretch'
-            )
+    with col2:
+        with st.container(border=True):
+            st.subheader("Resumo Mensal")
+            st.write("Relatório executivo agrupado por mês.")
+            pdf_m = rel_service.export_pdf_mensal_direto(df, MESES_PT)
+            if pdf_m:
+                st.download_button("🗓️ Baixar Mensal", pdf_m, "mensal.pdf", "application/pdf", key="m", use_container_width=True)
+else:
+    st.warning("Nenhuma informação disponível para gerar relatórios.")
