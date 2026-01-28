@@ -2,7 +2,7 @@
 **Portal de Transparência, Performance e Gestão de Releases.**
 
 <img src="https://img.shields.io/badge/license-MIT-green"><img/>
-<img src="https://img.shields.io/badge/version-5.0.0-blue"><img/>
+<img src="https://img.shields.io/badge/version-0.5.0-blue"><img/>
 <img src="https://img.shields.io/badge/build-202601270748-orange"><img/>
 
 Ver mais em [Changelog](./docs/semver/changelog.md)
@@ -57,7 +57,7 @@ Vitrine-Matriz/
 │       ├── navigation.py # Orquestrador de menus e rotas
 │       └── pages/        # Telas da aplicação (Dashboard, Relatórios, etc.)
 └── app.py                # Ponto de entrada da aplicação
----
+```
 
 🔧 Configuração Inicial
 1. Clone o repositório:
