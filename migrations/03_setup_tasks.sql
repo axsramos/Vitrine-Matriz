@@ -2,6 +2,7 @@ CREATE TABLE T_Rel (
             RelCod INTEGER PRIMARY KEY AUTOINCREMENT,
             RelVrs VARCHAR(50) NOT NULL,    -- Versão (ex: 1.0.0)
             RelTtlCmm VARCHAR(255),         -- Título/Comentário
+            RelSit VARCHAR(50) DEFAULT 'Aberto', -- Situação
             RelDat DATE,                    -- Data da Publicação
             
             -- Auditoria

@@ -14,6 +14,3 @@ CREATE TABLE T_Dev (
 
 CREATE INDEX IF NOT EXISTS IDX_DEV_01 ON T_DEV (DevAudIns);
 CREATE INDEX IF NOT EXISTS IDX_DEV_02 ON T_DEV (DevNom);
-
-INSERT INTO T_Dev (DevNom, DevUsrCod, DevAudUsr)
-        VALUES ('Administrador', 1, 'system_setup');

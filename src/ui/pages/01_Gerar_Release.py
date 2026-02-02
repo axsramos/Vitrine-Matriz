@@ -9,7 +9,7 @@ from src.services.task_service import TaskService
 from src.models.md.RelMD import RelMD
 from src.models.md.TrfMD import TrfMD
 from src.models.md.DevMD import DevMD
-from src.models.md.UsrMD import UserRole
+from src.models.UserRole import UserRole
 
 # Configuração da Página
 st.set_page_config(

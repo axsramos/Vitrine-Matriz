@@ -35,10 +35,3 @@ CREATE TABLE T_UsrPrf (
             
             FOREIGN KEY(UsrPrfUsrCod) REFERENCES T_Usr(UsrCod) ON DELETE CASCADE
         );
-
--- // UsrPwd: admin123
-INSERT INTO T_Usr (UsrNom, UsrLgn, UsrPwd, UsrPrm) 
-        VALUES ('Administrador', 'admin', '240be518fabd2724ddb6f04eeb1da5967448d7e831c08c8fa822809f74c720a9', 'admin');
-
-INSERT INTO T_UsrPrf (UsrPrfBio, UsrPrfFto, UsrPrfUrl, UsrPrfCgo, UsrPrfUsrCod)
-        VALUES ('Administrador do sistema', 'admin.png', 'admin.com', 'Administrador', 1);

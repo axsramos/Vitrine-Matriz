@@ -2,7 +2,7 @@ from typing import List, Dict, Tuple, Optional
 from src.models.DevModel import DevModel
 from src.core.database import Database
 from src.services.user_service import UserService
-from src.models.md.UsrMD import UserRole
+from src.models.UserRole import UserRole
 
 class DevService:
 

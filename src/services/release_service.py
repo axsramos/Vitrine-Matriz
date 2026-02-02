@@ -6,6 +6,7 @@ from fpdf import FPDF
 
 from src.models.ReleaseModel import ReleaseModel
 from src.core.database import Database
+from src.models.ReleaseStatus import ReleaseStatus
 
 class ReleaseService:
 
@@ -48,7 +49,7 @@ class ReleaseService:
                 RelVrs=versao,
                 RelDat=data_publicacao,
                 RelDsc=desc,
-                RelSit="Aberto"
+                RelSit=ReleaseStatus.FECHADO
             )
 
             if new_rel.create():

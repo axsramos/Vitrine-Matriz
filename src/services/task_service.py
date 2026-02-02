@@ -10,6 +10,14 @@ class TaskService:
         """
         # O find_all já trata a conexão e filtros básicos
         return TaskModel.find_all()
+    
+    def get_detailed_tasks(self, where: str = None, params: tuple = None) -> List[Dict]:
+        """
+        Retorna tarefas enriquecidas com nomes de Dev e Release.
+        Este método chama a query específica com JOINs no Model.
+        """
+        # Chama o método estático/classe definido no TaskModel
+        return TaskModel.get_detailed_tasks(where, params)
 
     def get_tasks_by_release(self, rel_id: int) -> List[Dict]:
         """Busca tarefas vinculadas a uma release específica."""

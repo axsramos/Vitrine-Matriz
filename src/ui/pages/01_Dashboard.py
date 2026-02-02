@@ -54,7 +54,12 @@ with st.container():
     c1.metric(label=RelMD.FIELDS_MD['RelVrs']['Label'], value=versao_txt)
     c2.info(f"**Última Atualização em {data_txt}**")
     # Label vindo do MD: RelSit -> "Situação"
-    c3.metric(label=RelMD.FIELDS_MD['RelSit']['Label'], value=last_rel.get('RelSit', '-'))
+    # Se 'RelSit' não existir no MD, usamos "Situação" fixo
+    lbl_sit = RelMD.FIELDS_MD.get('RelSit', {}).get('Label', 'Situação')
+    c3.metric(
+        label=RelMD.FIELDS_MD['RelSit']['Label'],
+        value=last_rel.get('RelSit', 'N/A')
+    )
 
 st.divider()
 

@@ -15,6 +15,7 @@ class RelMD:
     FIELDS_MD = {
         "RelCod": {"Type": "INTEGER", "Label": "ID"},
         "RelVrs": {"Type": "VARCHAR", "Label": "Versão", "Required": True},
+        "RelSit": {"Type": "VARCHAR", "Label": "Situação", "Required": False},
         "RelTtlCmm": {"Type": "VARCHAR", "Label": "Título/Comentário"},
         "RelDat": {"Type": "DATE", "Label": "Data Publicação"},
         
