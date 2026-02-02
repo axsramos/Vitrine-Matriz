@@ -1,62 +1,87 @@
 import streamlit as st
-import os
-from src.core.config import Config
-from src.core.database import Database
-from src.core.auth_middleware import require_auth
-from src.core import ui_utils
 
-# Apenas administradores podem alterar configurações globais
-require_auth(allowed_roles=['admin'])
+# --- CONFIGURAÇÃO E CORE ---
+from src.core.config import Config
+from src.core.auth_middleware import require_auth
+from src.models.UserRole import UserRole
+
+# --- SERVIÇOS ---
+# Importamos o novo serviço criado
+from src.services.system_service import SystemService
+
+# Configuração da Página
+st.set_page_config(
+    page_title=f"Configurações | {Config.APP_TITLE}", 
+    layout="wide"
+)
+
+# Segurança de Acesso (Apenas Admin)
+require_auth(allowed_roles=[UserRole.ADMIN])
 
 st.title("🛠️ Configurações do Sistema")
-st.write("Gerencie os parâmetros globais e a identidade visual da plataforma.")
+st.write("Gerencie parâmetros globais, backups e identidade visual.")
 
-db = Database()
+# Instância do Serviço
+sys_service = SystemService()
+
+# --- NAVEGAÇÃO ---
+tab_visual, tab_backup, tab_info = st.tabs([
+    "🎨 Identidade Visual", 
+    "💾 Banco de Dados", 
+    "ℹ️ Sistema"
+])
 
 # --- ABA 1: IDENTIDADE VISUAL ---
-tab_visual, tab_banco, tab_info = st.tabs(["Identidade Visual", "Banco de Dados", "Informações do Sistema"])
-
 with tab_visual:
     st.subheader("Personalização")
-    with st.form("form_visual"):
-        app_title = st.text_input("Título da Aplicação", value=Config.APP_TITLE)
-        app_subtitle = st.text_input("Subtítulo/Slogan", value=Config.APP_SUBTITLE)
-        
-        st.info("💡 As alterações nos títulos e logotipos serão refletidas após o reinício da aplicação.")
-        
-        if st.form_submit_button("Salvar Identidade", type="primary"):
-            # Aqui você pode implementar a lógica para gravar no .env ou em uma tabela T_Cfg
-            st.success("Configurações visuais enviadas para processamento.")
-
-with tab_banco:
-    st.subheader("Status do Banco de Dados")
-    col1, col2 = st.columns(2)
+    st.caption("Defina como a aplicação é apresentada aos usuários.")
     
-    # Busca estatísticas reais das tabelas revisadas
-    try:
-        total_usr = db.select("SELECT COUNT(*) as total FROM T_Usr")[0]['total']
-        total_trf = db.select("SELECT COUNT(*) as total FROM T_Trf")[0]['total']
-        total_rel = db.select("SELECT COUNT(*) as total FROM T_Rel")[0]['total']
-        total_dev = db.select("SELECT COUNT(*) as total FROM T_Dev")[0]['total']
+    with st.form("form_visual"):
+        # Labels fixos pois referem-se a config de sistema, não a banco
+        app_title = st.text_input("Nome da Aplicação", value=Config.APP_TITLE)
+        app_subtitle = st.text_input("Slogan / Subtítulo", value=Config.APP_SUBTITLE)
         
-        col1.metric("Usuários Cadastrados", total_usr)
-        col1.metric("Desenvolvedores no Time", total_dev)
-        col2.metric("Total de Tarefas", total_trf)
-        col2.metric("Releases Publicadas", total_rel)
-    except Exception as e:
-        st.error(f"Erro ao ler estatísticas: {e}")
+        st.info("💡 Nota: Para tornar estas alterações permanentes, é necessário implementar persistência em arquivo .env ou tabela T_Cfg.")
+        
+        if st.form_submit_button("Aplicar Alterações", type="primary"):
+            # Aqui entraria a chamada para sys_service.update_config(...)
+            st.success("Configurações visuais enviadas (Simulação).")
 
-    st.divider()
-    st.subheader("Manutenção")
-    if st.button("📦 Realizar Backup do Banco"):
-        st.warning("Funcionalidade em desenvolvimento: O arquivo vitrine.db será compactado.")
+# --- ABA 2: BACKUP E MANUTENÇÃO ---
+with tab_backup:
+    st.subheader("Segurança de Dados")
+    
+    col_warn, col_action = st.columns([2, 1])
+    
+    with col_warn:
+        st.warning(
+            """
+            **Atenção:** O backup realiza uma cópia física do arquivo SQLite.
+            Recomenda-se realizar esta operação antes de grandes atualizações ou importações de dados.
+            """
+        )
+    
+    with col_action:
+        st.write("###") # Espaçamento
+        if st.button("🚀 Gerar Backup Agora", use_container_width=True):
+            with st.spinner("Processando cópia de segurança..."):
+                success, msg = sys_service.create_database_backup()
+                
+                if success:
+                    st.toast("Backup realizado!", icon="✅")
+                    st.success(msg)
+                else:
+                    st.error(msg)
 
+# --- ABA 3: INFORMAÇÕES DO SISTEMA ---
 with tab_info:
     st.subheader("Ambiente de Execução")
-    st.text(f"Diretório Raiz: {Config.BASE_DIR}")
-    st.text(f"Caminho do Banco: {Config.DB_STR_PATH}")
-    st.text(f"Pasta de Uploads: {Config.AVATAR_PATH}")
-    st.text(f"Ambiente: {Config.ENV.upper()}")
     
-    st.divider()
-    st.caption("Vitrine-Matriz Framework | 2026")
+    info_data = sys_service.get_system_info()
+    
+    # Exibição formatada
+    for key, value in info_data.items():
+        with st.container(border=True):
+            c1, c2 = st.columns([1, 3])
+            c1.caption(key)
+            c2.code(value, language="text")

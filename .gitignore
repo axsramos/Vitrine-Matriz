@@ -18,7 +18,10 @@ __pycache__/
 *.sqlite
 *.sqlite3
 *.db
-data/database.db
+database/database.db
+database/uploads/*
+database/logo.png
+backups/*
 
 # Uploads e Assets Dinâmicos
 # Ignoramos as fotos reais enviadas, mas mantemos a pasta via arquivo .gitkeep

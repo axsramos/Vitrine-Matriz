@@ -1,0 +1,93 @@
+import streamlit as st
+import shutil
+import os
+from src.core.config import Config
+from src.core.database import Database
+from src.core.auth_middleware import require_auth
+from src.models.UserRole import UserRole
+from src.core import ui_utils
+from datetime import datetime
+
+# Apenas administradores podem alterar configurações globais
+require_auth(allowed_roles=[UserRole.ADMIN])
+
+st.title("🛠️ Configurações do Sistema")
+st.write("Gerencie os parâmetros globais e a identidade visual da plataforma.")
+
+db = Database()
+
+# --- ABA 1: IDENTIDADE VISUAL ---
+tab_visual, tab_banco, tab_info = st.tabs(["Identidade Visual", "Banco de Dados", "Informações do Sistema"])
+
+with tab_visual:
+    st.subheader("Personalização")
+    with st.form("form_visual"):
+        app_title = st.text_input("Título da Aplicação", value=Config.APP_TITLE)
+        app_subtitle = st.text_input("Subtítulo/Slogan", value=Config.APP_SUBTITLE)
+        
+        st.info("💡 As alterações nos títulos e logotipos serão refletidas após o reinício da aplicação.")
+        
+        if st.form_submit_button("Salvar Identidade", type="primary"):
+            # Aqui você pode implementar a lógica para gravar no .env ou em uma tabela T_Cfg
+            st.success("Configurações visuais enviadas para processamento.")
+
+with tab_banco:
+    st.subheader("Status do Banco de Dados")
+    col1, col2 = st.columns(2)
+    
+    # Busca estatísticas reais das tabelas revisadas
+    try:
+        total_usr = db.select("SELECT COUNT(*) as total FROM T_Usr")[0]['total']
+        total_trf = db.select("SELECT COUNT(*) as total FROM T_Trf")[0]['total']
+        total_rel = db.select("SELECT COUNT(*) as total FROM T_Rel")[0]['total']
+        total_dev = db.select("SELECT COUNT(*) as total FROM T_Dev")[0]['total']
+        
+        col1.metric("Usuários Cadastrados", total_usr)
+        col1.metric("Desenvolvedores no Time", total_dev)
+        col2.metric("Total de Tarefas", total_trf)
+        col2.metric("Releases Publicadas", total_rel)
+    except Exception as e:
+        st.error(f"Erro ao ler estatísticas: {e}")
+
+    st.divider()
+    st.subheader("Manutenção")
+    if st.button("📦 Realizar Backup do Banco", help="Cria uma cópia de segurança imediata"):
+        try:
+            # 1. Definir caminhos
+            source_db = Config.DB_PATH
+            backup_dir = Config.BACKUP_PATH
+            
+            # 2. Verificar se o diretório de backup existe, se não, cria
+            if not os.path.exists(backup_dir):
+                os.makedirs(backup_dir)
+                
+            # 3. Gerar nome do arquivo com Timestamp (YYYYMMDDHHMMSS)
+            timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
+            db_name = os.path.basename(source_db).split('.')[0] # Pega 'vitrine' de 'vitrine.db'
+            backup_filename = f"{db_name}_{timestamp}.db"
+            destination = os.path.join(backup_dir, backup_filename)
+            
+            # 4. Executar a cópia (copy2 preserva metadados)
+            shutil.copy2(source_db, destination)
+            
+            # 5. Feedback visual
+            st.toast(f"Backup realizado: {backup_filename}", icon="✅")
+            st.success(f"Sucesso! Backup salvo em: `{destination}`")
+            
+        except FileNotFoundError:
+            st.error("Erro: Arquivo de banco de dados original não encontrado.")
+        except PermissionError:
+            st.error("Erro: Permissão negada para escrever na pasta de backup.")
+        except Exception as e:
+            st.error(f"Erro inesperado ao gerar backup: {e}")
+
+with tab_info:
+    st.subheader("Ambiente de Execução")
+    st.text(f"Diretório Raiz: {Config.BASE_DIR}")
+    st.text(f"Caminho do Banco: {Config.DB_STR_PATH}")
+    st.text(f"Pasta de Uploads: {Config.AVATAR_PATH}")
+    st.text(f"Ambiente: {Config.ENV.upper()}")
+    
+    st.divider()
+    st.caption("Vitrine-Matriz Framework | 2026")
+    

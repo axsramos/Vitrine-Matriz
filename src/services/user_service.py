@@ -1,124 +1,146 @@
-import hashlib
+import bcrypt
+from typing import List, Optional, Tuple, Dict
 from src.models.UserModel import UserModel
-from src.models.UserProfileModel import UserProfileModel
 
 class UserService:
-    def __init__(self):
-        self.model = UserModel()
     
-    def get_all_users(self):
+    def get_all_users(self) -> List[Dict]:
         """
-        Retorna todos os utilizadores utilizando a lógica do CrudMixin.
+        Retorna todos os utilizadores ativos.
+        O Mixin (find_all) já filtra automaticamente os excluídos (Soft Delete).
         """
-        try:
-            # O read_all do CrudMixin já trata a conexão e retorna a lista de dicts
-            # Podemos passar filtros ou ordenação se o seu Mixin suportar
-            return self.model.read_all() 
-        except Exception as e:
-            print(f"Erro ao ler utilizadores via Mixin: {e}")
-            return []
+        return UserModel.find_all()
 
-    def _hash_password(self, password):
-        """Gera hash SHA256 para comparar com o banco."""
-        return hashlib.sha256(password.encode()).hexdigest()
-    
-    def login(self, username, password):
-        model = UserModel()
-        password_hash = self._hash_password(password)
-        
-        # Busca usuário ativo (UsrAudDlt IS NULL)
-        # Atenção: Usando UsrPrm se precisar validar permissão depois
-        users = model.read_all(
-            where="UsrLgn = ? AND UsrPwd = ? AND UsrAudDlt IS NULL", 
-            params=(username, password_hash)
+    def get_user_by_id(self, user_id: int) -> Optional[Dict]:
+        """Busca um usuário pelo ID."""
+        return UserModel.get_by_id(user_id)
+
+    def create_user(self, login: str, nome: str, senha: str, perfil: str) -> Tuple[bool, str]:
+        """
+        Cria novo usuário.
+        Auditoria (Data/Autor) é injetada automaticamente pelo Mixin.
+        """
+        # 1. Validação de Duplicidade
+        if UserModel.exists(login): # Se tiveres implementado verificação por login, ou:
+             existing = UserModel.find_all("UsrLgn = ?", (login,))
+             if existing:
+                 return False, f"O login '{login}' já está em uso."
+
+        # 2. Criptografia segura
+        hashed_pwd = bcrypt.hashpw(senha.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
+
+        # 3. Criação
+        user = UserModel(
+            UsrNom=nome,
+            UsrLgn=login,
+            UsrPwd=hashed_pwd,
+            UsrPrm=perfil
         )
-        
-        return users[0] if users else None
 
-    def get_user_profile(self, user_id):
-        model = UserProfileModel()
-        profiles = model.read_all(where="UsrPrfUsrCod = ?", params=(user_id,))
-        return profiles[0] if profiles else {}
-    
-    def update_profile(self, user_id, profile_data: dict):
-        """Cria ou Atualiza o perfil."""
-        model = UserProfileModel()
-        
-        # Verifica se já existe
-        existing = model.read_all(where="UsrPrfUsrCod = ?", params=(user_id,))
-        
-        if existing:
-            # Atualiza objeto existente
-            current_data = existing[0]
-            model = UserProfileModel(**current_data)
-            
-            # Atualiza campos recebidos
-            for k, v in profile_data.items():
-                if hasattr(model, k):
-                    setattr(model, k, v)
-        else:
-            # Cria novo
-            model = UserProfileModel(**profile_data)
-            model.UsrPrfUsrCod = user_id
-            
-        return model.save()
-    
-    def create_user(self, login, nome, senha, permissao):
-        """
-        Cria um novo usuário utilizando o método .save() do CrudMixin.
-        """
         try:
-            # Em vez de passar um dicionário para um método create(), 
-            # alimentamos os atributos do objeto conforme definido no CrudMixin
-            new_user = UserModel()
-            new_user.UsrLgn = login
-            new_user.UsrNom = nome
-            new_user.UsrPwd = self._hash_password(senha)
-            new_user.UsrPrm = permissao
-            new_user.UsrAudUsr = "admin"
-            
-            # O .save() identifica que a PK está nula e executa o INSERT
-            if new_user.save():
-                return True, "Usuário cadastrado com sucesso!"
-            return False, "Falha ao salvar usuário no banco."
-            
+            if user.create():
+                return True, "Usuário criado com sucesso!"
+            return False, "Erro ao criar registro."
         except Exception as e:
-            return False, f"Erro no UserService: {str(e)}"
+            return False, f"Erro técnico: {str(e)}"
 
-    def update_user_permission(self, usr_id, new_role):
-        """Atualiza a permissão buscando o objeto e salvando a alteração."""
-        try:
-            if self.model.read_by_field("UsrCod", usr_id): # Usa o método do seu Mixin
-                self.model.UsrPrm = new_role
-                return self.model.save()
-            return False
-        except Exception as e:
-            print(f"Erro ao atualizar permissão: {e}")
-            return False
+    def login(self, login: str, senha: str) -> Tuple[bool, Optional[Dict]]:
+        """Autenticação de usuário."""
+        # Busca pelo login (o Mixin já ignora os deletados logicamente)
+        users = UserModel.find_all("UsrLgn = ?", (login,))
+        
+        if not users:
+            return False, None
             
-    def get_user_by_id(self, usr_id):
-        # Utiliza o read_all com filtro conforme seu Mixin
-        res = self.model.read_all(where="UsrCod = ?", params=(usr_id,))
-        return res[0] if res else None
-    
-    def reset_password(self, usr_id):
-        """
-        Define a senha do usuário para o padrão '123' com criptografia.
-        """
+        user = users[0]
+        stored_pwd = user['UsrPwd']
+        
+        # Verifica a senha (compatível com bcrypt)
+        # Se as senhas antigas estiverem em SHA256, terás de migrar ou manter suporte duplo temporário
         try:
-            # 1. Busca o registro atual
-            results = self.model.read_all(where="UsrCod = ?", params=(usr_id,))
-            if results:
-                # 2. Carrega no objeto do Model para o Mixin entender que é um UPDATE
-                user_obj = UserModel(**results[0])
+            if bcrypt.checkpw(senha.encode('utf-8'), stored_pwd.encode('utf-8')):
+                return True, user
+        except ValueError:
+            # Fallback caso tenhas senhas antigas sem hash bcrypt (opcional)
+            return False, None
+            
+        return False, None
+
+    def reset_password(self, user_id: int) -> bool:
+        """Reseta a senha para '123'."""
+        # Gera hash da senha padrão
+        default_pwd = bcrypt.hashpw('123'.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
+        
+        # Instancia apenas com a PK e o campo a alterar
+        user = UserModel(UsrCod=user_id, UsrPwd=default_pwd)
+        
+        # O update só altera o campo UsrPwd e a auditoria de update
+        return user.update()
+
+    def update_permission(self, user_id: int, new_role: str) -> bool:
+        """Altera o perfil de acesso do usuário."""
+        user = UserModel(UsrCod=user_id, UsrPrm=new_role)
+        return user.update()
+
+    def delete_user(self, user_id: int) -> bool:
+        """Exclusão lógica do usuário."""
+        user = UserModel(UsrCod=user_id)
+        return user.delete()
+    
+    def get_profile(self, user_id: int) -> Dict:
+        """Busca o perfil do usuário (T_UsrPrf)."""
+        from src.models.UserProfileModel import UserProfileModel
+        # Busca por FK (UsrPrfUsrCod)
+        res = UserProfileModel.find_all("UsrPrfUsrCod = ?", (user_id,))
+        return res[0] if res else {}
+
+    def update_profile(self, user_id: int, data: Dict, file_obj=None) -> Tuple[bool, str]:
+        """
+        Atualiza ou Cria o perfil do usuário.
+        Gerencia o upload da imagem se fornecido.
+        """
+        import os
+        from src.core.config import Config
+        from src.models.UserProfileModel import UserProfileModel
+        
+        # 1. Tratamento de Upload de Imagem
+        if file_obj:
+            try:
+                # Garante diretório
+                os.makedirs(Config.AVATAR_PATH, exist_ok=True)
                 
-                # 3. Aplica o hash no valor padrão '123'
-                # Certifique-se de que o método _hash_password está definido na classe
-                user_obj.UsrPwd = self._hash_password("123")
+                # Gera nome único: avatar_{user_id}.ext
+                file_ext = os.path.splitext(file_obj.name)[1]
+                file_name = f"avatar_{user_id}{file_ext}"
+                save_path = os.path.join(Config.AVATAR_PATH, file_name)
                 
-                # 4. Persiste no banco
-                return user_obj.save()
-            return False
+                # Salva no disco
+                with open(save_path, "wb") as f:
+                    f.write(file_obj.getbuffer())
+                
+                # Adiciona caminho ao dict de dados
+                data["UsrPrfFto"] = save_path
+            except Exception as e:
+                return False, f"Erro ao salvar imagem: {str(e)}"
+
+        # 2. Persistência (Insert ou Update)
+        try:
+            # Verifica se já existe perfil para este usuário
+            existing = self.get_profile(user_id)
+            
+            if existing:
+                # Update (usando a PK do perfil encontrada)
+                profile = UserProfileModel(UsrPrfCod=existing['UsrPrfCod'], **data)
+                if profile.update():
+                    return True, "Perfil atualizado com sucesso!"
+            else:
+                # Insert (Novo perfil)
+                profile = UserProfileModel(UsrPrfUsrCod=user_id, **data)
+                if profile.create():
+                    return True, "Perfil criado com sucesso!"
+            
+            return False, "Erro ao gravar dados."
+            
         except Exception as e:
-            print(f"Erro ao renovar senha: {e}")
-            return False
+            return False, f"Erro técnico: {str(e)}"
+    

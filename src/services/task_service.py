@@ -1,141 +1,71 @@
-import pandas as pd
+from typing import List, Tuple, Dict, Optional
 from src.models.TaskModel import TaskModel
-from src.core.database import Database
 
 class TaskService:
-    def __init__(self):
-        self.model = TaskModel()
-        self.db = Database()
+    
+    def get_all_tasks(self) -> List[Dict]:
+        """
+        Retorna todas as tarefas cadastradas.
+        Substitui o antigo retorno em DataFrame por Lista de Dicionários.
+        """
+        # O find_all já trata a conexão e filtros básicos
+        return TaskModel.find_all()
 
-    def get_all_tasks(self):
-        # Usa o read_join do Model que já traz DevNome e RelVersao
-        data = TaskModel.read_join()
-        
-        # Colunas extras geradas pelo JOIN
-        extra_cols = ['DevNome', 'RelVersao']
-        all_cols = TaskModel.FIELDS + extra_cols
-        
-        if not data:
-            return pd.DataFrame(columns=all_cols)
-        
-        df = pd.DataFrame(data, columns=all_cols)
-        return df
+    def get_tasks_by_release(self, rel_id: int) -> List[Dict]:
+        """Busca tarefas vinculadas a uma release específica."""
+        return TaskModel.find_all("TrfRelCod = ?", (rel_id,))
 
-    def save_task(self, task_data: dict):
+    def get_pending_tasks(self) -> List[Dict]:
+        """
+        Busca tarefas do Backlog (sem release vinculada).
+        O Mixin já filtra automaticamente os deletados (Soft Delete).
+        """
+        return TaskModel.find_all("TrfRelCod IS NULL")
+
+    def create_task(self, titulo: str, desc: str, tipo: str, prio: str, dev_id: int, rel_id: int = None) -> Tuple[bool, str]:
+        """
+        Cria uma nova tarefa.
+        Auditoria (Data/Autor) é injetada automaticamente pelo Mixin.
+        """
         try:
-            task = TaskModel(**task_data)
-            # Define usuário de auditoria se não vier (ex: system)
-            if not task.TrfAudUsr:
-                task.TrfAudUsr = 'system_user' 
+            # Instancia o modelo com os dados (Active Record)
+            task = TaskModel(
+                TrfTit=titulo,
+                TrfDsc=desc,
+                TrfTip=tipo,
+                TrfPri=prio,
+                TrfDevCod=dev_id,
+                TrfRelCod=rel_id,
+                TrfSit="Aberto"  # Status inicial padrão
+            )
+            
+            # O create() trata o INSERT e auditoria
+            if task.create():
+                return True, "Tarefa criada com sucesso!"
+            else:
+                return False, "Não foi possível registrar a tarefa."
                 
-            if task.save():
-                return True, "Tarefa salva com sucesso!"
-            return False, "Erro ao gravar no banco."
         except Exception as e:
-            return False, f"Erro: {str(e)}"
+            return False, f"Erro técnico ao criar tarefa: {str(e)}"
 
-    def get_pending_tasks(self):
-        """Tarefas sem release (TrfRelCod IS NULL) e não deletadas."""
-        return self.get_all_tasks_filtered(where="t.TrfRelCod IS NULL")
+    def update_task_status(self, task_id: int, new_status: str) -> bool:
+        """
+        Atualiza apenas o status da tarefa.
+        Substitui a query manual UPDATE T_Trf...
+        """
+        # Instancia apenas com PK e o campo a alterar
+        task = TaskModel(TrfCod=task_id, TrfSit=new_status)
+        return task.update()
 
-    def get_all_tasks_filtered(self, where):
-        """Helper para chamar read_join com filtro."""
-        data = TaskModel.read_join(where=where)
-        extra_cols = ['DevNome', 'RelVersao']
-        all_cols = TaskModel.FIELDS + extra_cols
-        
-        if not data: return pd.DataFrame(columns=all_cols)
-        return pd.DataFrame(data, columns=all_cols)
+    def assign_release(self, task_id: int, rel_id: int) -> bool:
+        """Vincula uma tarefa a uma release."""
+        task = TaskModel(TrfCod=task_id, TrfRelCod=rel_id)
+        return task.update()
 
-    def update_task_release(self, task_id, release_id):
-        """Atualiza o TrfRelCod de uma tarefa."""
-        model = TaskModel()
-        tasks = model.read_all(where="TrfCod = ?", params=(task_id,))
-        if tasks:
-            # Reconstrói objeto
-            current = tasks[0]
-            task_obj = TaskModel(**current)
-            task_obj.TrfRelCod = release_id
-            return task_obj.save()
-        return False
-    
-    def mark_as_completed(self, trf_id):
+    def delete_task(self, task_id: int) -> bool:
         """
-        Atualiza o status da tarefa para 'Concluído' via CrudMixin.
+        Exclusão da tarefa.
+        Se o TaskModel tiver FIELDS_AUDIT com AudDlt, será Soft Delete automático.
         """
-        try:
-            # Usamos o ID da tarefa e passamos o novo valor para o campo TrfStt
-            return self.model.update(trf_id, TrfStt="Concluído")
-        except Exception as e:
-            print(f"Erro ao concluir tarefa: {e}")
-            return False
-    
-    def get_tasks_by_dev(self, dev_usr_cod):
-        """
-        Retorna tarefas pendentes vinculadas ao desenvolvedor logado.
-        """
-        sql = """
-            SELECT t.* FROM T_Trf t
-            JOIN T_Dev d ON t.TrfDevCod = d.DevCod
-            WHERE d.DevUsrCod = ? 
-              AND t.TrfStt != 'Concluído' 
-              AND t.TrfAudDlt IS NULL
-        """
-        # Usamos self.db diretamente em vez de self.model.db
-        return self.db.select(sql, (dev_usr_cod,))
-    
-    def finalize_tasks_bulk(self, task_ids, user_lgn):
-        """Finaliza múltiplas tarefas utilizando o método save() do CrudMixin."""
-        try:
-            for tid in task_ids:
-                # Carregamos o objeto para garantir que o save() execute UPDATE
-                task = TaskModel()
-                if task.read_by_field("TrfCod", tid):
-                    task.TrfStt = "Concluído"
-                    task.TrfAudUsr = user_lgn
-                    task.save()
-            return True
-        except Exception as e:
-            print(f"Erro ao finalizar em massa: {e}")
-            return False
-    
-    def delete_task(self, task_id):
-        """
-        Realiza a exclusão de uma tarefa.
-        Nota: O CrudMixin geralmente executa um 'Soft Delete' 
-        (preenche o campo TrfAudDlt) para manter a integridade dos dados.
-        """
-        try:
-            # 1. Instanciamos o modelo com a chave primária
-            task = TaskModel(TrfCod=task_id)
-            
-            # 2. Chamamos o método delete herdado do CrudMixin
-            # Este método usará o TrfCod para localizar e remover/desativar o registo
-            return task.delete()
-        except Exception as e:
-            print(f"Erro ao excluir tarefa {task_id}: {e}")
-            return False
-
-    def update_status(self, task_id, novo_status):
-        """
-        Atualização alternativa via SQL Direto para contornar problemas de persistência.
-        """
-        try:
-            # 1. Pegamos o usuário logado para auditoria
-            user_lgn = st.session_state.get('user_lgn', 'system')
-            
-            # 2. Preparamos a query SQL direta
-            # Atualizamos o status e o usuário de auditoria
-            sql = """
-                UPDATE T_Trf 
-                SET TrfStt = ?, 
-                    TrfAudUsr = ? 
-                WHERE TrfCod = ?
-            """
-            params = (novo_status, user_lgn, task_id)
-            # 3. Executamos via self.db (Database)
-            self.db.execute(sql, params)
-            return True
-        except Exception as e:
-            print(f"Erro ao atualizar status via SQL: {e}")
-            return False
+        task = TaskModel(TrfCod=task_id)
+        return task.delete()

@@ -8,7 +8,7 @@ load_dotenv()
 class Config:
     # --- AMBIENTE E UI ---
     ENV = os.getenv("APP_ENV", "local")
-    APP_TITLE = os.getenv("APP_TITLE", "Vitrine Matriz")
+    APP_TITLE = os.getenv("APP_TITLE", "Vitrine-Matriz")
     APP_SUBTITLE = os.getenv("APP_SUBTITLE", "Portal de Transparência e Performance")
 
     # --- CAMINHOS DE DIRETÓRIO (DINÂMICO) ---
@@ -53,3 +53,6 @@ class Config:
 
     # --- SEGURANÇA E SESSÃO ---
     SECRET_KEY = os.getenv("SECRET_KEY", "vitrine_secret_123")
+    
+    # --- DESTINO DO BACKAUP DA BASE DE DADOS ---
+    BACKUP_PATH = os.getenv("DB_BACKUP_PATH", "./backups")

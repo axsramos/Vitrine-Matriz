@@ -1,38 +1,113 @@
 import streamlit as st
-import pandas as pd
-from src.services.release_service import ReleaseService
+import csv
+from io import StringIO
 from datetime import datetime
 
-st.title("📊 Relatórios de Versão")
+# --- CONFIGURAÇÃO E CORE ---
+from src.core.config import Config
+from src.core.auth_middleware import require_auth
 
+# --- SERVIÇOS ---
+from src.services.release_service import ReleaseService
+
+# --- METADADOS ---
+from src.models.md.RelMD import RelMD
+
+# Configuração da Página
+st.set_page_config(
+    page_title=f"Relatórios | {Config.APP_TITLE}", 
+    layout="wide"
+)
+
+# Segurança de Acesso
+require_auth()
+
+st.title("📊 Central de Relatórios")
+st.write("Exporte o histórico de versões e métricas do sistema.")
+
+# Instância do Serviço
 rel_service = ReleaseService()
-data = rel_service.get_release_details() # MESMA FUNÇÃO DA TELA DE NOTAS
 
-if data:
-    df = pd.DataFrame(data)
-    df['RelDat'] = pd.to_datetime(df['RelDat'])
+# --- CARREGAMENTO DE DADOS ---
+# Busca dados enriquecidos (com contagem de tarefas) através do serviço
+report_data = rel_service.get_release_details_for_report()
 
-    MESES_PT = {
-        1: "Janeiro", 2: "Fevereiro", 3: "Março", 4: "Abril", 5: "Maio", 6: "Junho",
-        7: "Julho", 8: "Agosto", 9: "Setembro", 10: "Outubro", 11: "Novembro", 12: "Dezembro"
-    }
+if not report_data:
+    st.warning("Não há dados suficientes para gerar relatórios no momento.")
+    st.stop()
 
-    col1, col2 = st.columns(2)
+st.divider()
 
-    with col1:
-        with st.container(border=True):
-            st.subheader("Histórico Geral")
-            st.write("Relatório detalhado por ordem cronológica.")
-            pdf_g = rel_service.export_pdf_geral_direto(df)
-            if pdf_g:
-                st.download_button("📥 Baixar Geral", pdf_g, "geral.pdf", "application/pdf", key="g", use_container_width=True)
+# --- ÁREA DE DOWNLOADS ---
+# Layout em duas colunas para os tipos de relatório
+c1, c2 = st.columns(2)
 
-    with col2:
-        with st.container(border=True):
-            st.subheader("Resumo Mensal")
-            st.write("Relatório executivo agrupado por mês.")
-            pdf_m = rel_service.export_pdf_mensal_direto(df, MESES_PT)
-            if pdf_m:
-                st.download_button("🗓️ Baixar Mensal", pdf_m, "mensal.pdf", "application/pdf", key="m", use_container_width=True)
-else:
-    st.warning("Nenhuma informação disponível para gerar relatórios.")
+# --- 1. RELATÓRIO PDF (DOCUMENTAÇÃO) ---
+with c1:
+    with st.container(border=True):
+        st.subheader("📄 Documentação Oficial")
+        st.write("Arquivo PDF agrupado por mês, ideal para impressão ou arquivamento de notas de versão.")
+        
+        # Gerar PDF em memória
+        pdf_bytes = rel_service.generate_monthly_pdf(report_data)
+        
+        if pdf_bytes:
+            filename = f"relatorio_versoes_{datetime.now().strftime('%Y%m%d')}.pdf"
+            st.download_button(
+                label="⬇️ Baixar PDF Mensal",
+                data=pdf_bytes,
+                file_name=filename,
+                mime="application/pdf",
+                use_container_width=True,
+                type="primary"
+            )
+        else:
+            st.error("Erro ao processar PDF.")
+
+# --- 2. EXPORTAÇÃO DE DADOS (CSV/EXCEL) ---
+with c2:
+    with st.container(border=True):
+        st.subheader("📊 Dados Analíticos")
+        st.write("Exportação em formato CSV (compatível com Excel) contendo os dados brutos para análise.")
+        
+        # Gerar CSV em memória usando Python Nativo (sem Pandas)
+        def convert_to_csv(data_list):
+            if not data_list: return ""
+            output = StringIO()
+            # Define as colunas baseado nas chaves do primeiro dicionário
+            # Ou forçamos ordem específica para ficar bonito
+            fieldnames = ['RelCod', 'RelVrs', 'RelTit', 'RelDat', 'RelSit', 'QtdTarefas']
+            
+            writer = csv.DictWriter(output, fieldnames=fieldnames, extrasaction='ignore')
+            writer.writeheader()
+            for row in data_list:
+                writer.writerow(row)
+            return output.getvalue()
+
+        csv_data = convert_to_csv(report_data)
+        
+        filename_csv = f"dados_versoes_{datetime.now().strftime('%Y%m%d')}.csv"
+        st.download_button(
+            label="⬇️ Baixar CSV (Excel)",
+            data=csv_data,
+            file_name=filename_csv,
+            mime="text/csv",
+            use_container_width=True
+        )
+
+# --- PRÉ-VISUALIZAÇÃO ---
+st.divider()
+st.subheader("🔍 Pré-visualização dos Dados")
+
+# Formatação simples para tabela na tela
+display_data = []
+for item in report_data:
+    display_data.append({
+        RelMD.FIELDS_MD['RelVrs']['Label']: item.get('RelVrs'),
+        RelMD.FIELDS_MD['RelTit']['Label']: item.get('RelTit'),
+        RelMD.FIELDS_MD['RelDat']['Label']: item.get('RelDat'),
+        "Tarefas": item.get('QtdTarefas', 0),
+        RelMD.FIELDS_MD['RelSit']['Label']: item.get('RelSit')
+    })
+
+st.dataframe(display_data, use_container_width=True)

@@ -8,3 +8,6 @@ plotly
 sqlalchemy
 mysql-connector-python
 psycopg2-binary
+bcrypt
+fpdf
+altair

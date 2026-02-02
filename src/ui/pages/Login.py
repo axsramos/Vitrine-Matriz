@@ -1,21 +1,25 @@
 import streamlit as st
 from src.services.user_service import UserService
-from src.core import ui_utils
 from src.core.config import Config
 
-# Configuração da página
-st.set_page_config(page_title="Acesso - Vitrine Matriz", page_icon="🔑", layout="wide")
+# Configuração da página (Deve ser a primeira instrução Streamlit)
+st.set_page_config(
+    page_title=f"Acesso | {Config.APP_TITLE}", 
+    page_icon="🔑", 
+    layout="wide"
+)
 
-# --- CENTRALIZAÇÃO E LARGURA ---
-# A proporção [1, 2, 1] cria um formulário bem largo na horizontal
-col1, col2, col3 = st.columns([1, 2, 1])
+# Nota: Não usamos require_auth() aqui, pois é a tela pública.
 
-with col2:
-    # Espaçamento superior
+# --- ESTILIZAÇÃO E LAYOUT ---
+# Centralização: Colunas [1, 2, 1] deixam o formulário no centro com boa largura
+col_esq, col_centro, col_dir = st.columns([1, 2, 1])
+
+with col_centro:
+    # Espaçamento superior para não colar no topo
     st.markdown("<br><br>", unsafe_allow_html=True)
     
-    # 1. TÍTULO E SUBTÍTULO (Baseados no Config/Env)
-    # Título principal (H2) e Subtítulo (H5/Small)
+    # 1. CABEÇALHO (Identidade Visual)
     st.markdown(f"""
         <div style='text-align: center;'>
             <h2 style='margin-bottom: 0px;'>{Config.APP_TITLE}</h2>
@@ -25,34 +29,46 @@ with col2:
     
     st.markdown("<br>", unsafe_allow_html=True)
 
-    # 2. FORMULÁRIO AMPLIADO
+    # 2. FORMULÁRIO DE LOGIN
     with st.form("login_form"):
-        # st.write("### Identificação")
-        
-        # Inputs que se adaptam à largura da coluna central
+        # Inputs simples e diretos
         username = st.text_input("Usuário", placeholder="Digite seu login...")
         password = st.text_input("Senha", type="password", placeholder="Digite sua senha...")
         
         st.markdown("<br>", unsafe_allow_html=True)
         
+        # Botão de Ação (Primary para destaque)
         submit = st.form_submit_button("Acessar Painel", use_container_width=True, type="primary")
         
         if submit:
             service = UserService()
-            user_data = service.login(username, password)
             
-            if user_data:
-                profile = service.get_user_profile(user_data['UsrCod'])
-                st.session_state['user'] = {**user_data, **profile}
-                st.success("Acesso autorizado! Carregando...")
+            # Chama o serviço (agora retorna Tupla: sucesso, dados_usuario)
+            is_authenticated, user_data = service.login(username, password)
+            
+            if is_authenticated and user_data:
+                # Busca dados complementares do perfil (Cargo, Foto, etc.)
+                # Nota: Método renomeado de get_user_profile para get_profile
+                profile_data = service.get_profile(user_data['UsrCod'])
+                
+                # Consolida os dados na Sessão
+                session_data = {**user_data, **profile_data}
+                
+                # IMPORTANTE: Mapeamento para o SessionHelper funcionar na Auditoria
+                # O Helper busca 'login', mas o banco traz 'UsrLgn'
+                session_data['login'] = user_data['UsrLgn']
+                
+                st.session_state['user'] = session_data
+                
+                st.toast("Login realizado com sucesso!", icon="✅")
+                st.success("Redirecionando...")
                 st.rerun()
             else:
                 st.error("Credenciais inválidas. Verifique usuário e senha.")
 
     # Rodapé discreto
-    st.markdown(
-        f"<div style='text-align: center; color: gray; font-size: 0.8em;'>"
-        f"Ambiente: {Config.ENV.upper()} | Vitrine Matriz &copy; 2026"
-        f"</div>", 
-        unsafe_allow_html=True
-    )
+    st.markdown("""
+        <div style='text-align: center; margin-top: 50px; font-size: 0.8em; color: #888;'>
+            &copy; Vitrine de Matriz - Acesso Restrito
+        </div>
+    """, unsafe_allow_html=True)
