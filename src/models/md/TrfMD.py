@@ -13,16 +13,17 @@ class TrfMD:
     FIELDS_AUDIT = ["TrfAudIns", "TrfAudUpd", "TrfAudDlt", "TrfAudUsr"]
 
     FIELDS = [
-        "TrfCod", "TrfTtl", "TrfDesc", "TrfPrio", "TrfImp", "TrfStt", "TrfDatEnt",
+        "TrfCod", "TrfTit", "TrfDsc", "TrfTip", "TrfPri", "TrfImp", "TrfStt", "TrfDatEnt",
         "TrfDevCod", "TrfRelCod",
         "TrfAudIns", "TrfAudUpd", "TrfAudDlt", "TrfAudUsr"
     ]
     
     FIELDS_MD = {
         "TrfCod": {"Type": "INTEGER", "Label": "Código"},
-        "TrfTtl": {"Type": "VARCHAR", "Label": "Título", "Required": True},
-        "TrfDesc": {"Type": "TEXTAREA", "Label": "Descrição"},
-        "TrfPrio": {"Type": "VARCHAR", "Label": "Prioridade"},
+        "TrfTit": {"Type": "VARCHAR", "Label": "Título", "Required": True},
+        "TrfDsc": {"Type": "TEXTAREA", "Label": "Descrição"},
+        "TrfTip": {"Type": "VARCHAR", "Label": "Tipo de Tarefa"},
+        "TrfPri": {"Type": "VARCHAR", "Label": "Prioridade"},
         "TrfImp": {"Type": "VARCHAR", "Label": "Impacto"},
         "TrfStt": {"Type": "VARCHAR", "Label": "Status"},
         "TrfDatEnt": {"Type": "DATE", "Label": "Entrega"},

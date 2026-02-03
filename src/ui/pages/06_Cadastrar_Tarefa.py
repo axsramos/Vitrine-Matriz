@@ -12,6 +12,7 @@ from src.services.dev_service import DevService
 from src.models.md.TrfMD import TrfMD
 from src.models.md.DevMD import DevMD
 from src.models.UserRole import UserRole
+from src.models.TaskTip import TaskTip
 
 # Configuração da Página
 st.set_page_config(
@@ -44,7 +45,7 @@ current_dev_name_index = 0
 
 # Precisamos iterar para achar qual Dev corresponde ao UsrCod atual
 # (Poderíamos ter um método específico no service, mas vamos iterar a lista completa que é leve)
-all_devs_data = dev_service.get_all_devs()
+all_devs_data = dev_service.get_portfolio_data() #get_all_devs()
 for dev in all_devs_data:
     if dev.get('DevUsrCod') == current_user_id:
         current_dev_id = dev['DevCod']
@@ -83,9 +84,9 @@ with st.form("form_tarefa", clear_on_submit=True):
             index=current_dev_name_index
         )
         
-        # Tipo de Tarefa (Hardcoded ou Enum se existisse MD específico)
+        # Tipo de Tarefa ("Feature", "Bugfix", "Refactor", "Documentation", "Support")
         lbl_tip = TrfMD.FIELDS_MD['TrfTip']['Label']
-        tipos_disponiveis = ["Feature", "Bugfix", "Refactor", "Documentation", "Support"]
+        tipos_disponiveis = TaskTip.list()
         new_tip = st.selectbox(lbl_tip, options=tipos_disponiveis)
         
         # Prioridade

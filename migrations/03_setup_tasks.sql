@@ -16,9 +16,9 @@ CREATE INDEX IF NOT EXISTS IDX_REL_02 ON T_Rel (RelVrs);
 
 CREATE TABLE T_Trf (
             TrfCod INTEGER PRIMARY KEY AUTOINCREMENT,
-            TrfTtl VARCHAR(150) NOT NULL,
-            TrfDesc VARCHAR(4000),
-            TrfPrio VARCHAR(20) DEFAULT 'Média',
+            TrfTit VARCHAR(150) NOT NULL,
+            TrfDsc VARCHAR(4000),
+            TrfPri VARCHAR(20) DEFAULT 'Média',
             TrfImp VARCHAR(20) DEFAULT 'Médio',  -- Campo Impacto
             TrfStt VARCHAR(50) DEFAULT 'A Fazer',
             TrfDatEnt DATE,
