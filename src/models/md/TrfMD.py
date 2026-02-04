@@ -13,7 +13,7 @@ class TrfMD:
     FIELDS_AUDIT = ["TrfAudIns", "TrfAudUpd", "TrfAudDlt", "TrfAudUsr"]
 
     FIELDS = [
-        "TrfCod", "TrfTit", "TrfDsc", "TrfTip", "TrfPri", "TrfImp", "TrfStt", "TrfDatEnt",
+        "TrfCod", "TrfTit", "TrfDsc", "TrfTip", "TrfPri", "TrfImp", "TrfSit", "TrfDatEnt",
         "TrfDevCod", "TrfRelCod",
         "TrfAudIns", "TrfAudUpd", "TrfAudDlt", "TrfAudUsr"
     ]
@@ -25,7 +25,7 @@ class TrfMD:
         "TrfTip": {"Type": "VARCHAR", "Label": "Tipo de Tarefa"},
         "TrfPri": {"Type": "VARCHAR", "Label": "Prioridade"},
         "TrfImp": {"Type": "VARCHAR", "Label": "Impacto"},
-        "TrfStt": {"Type": "VARCHAR", "Label": "Status"},
+        "TrfSit": {"Type": "VARCHAR", "Label": "Status"},
         "TrfDatEnt": {"Type": "DATE", "Label": "Entrega"},
         
         "TrfDevCod": {"Type": "INTEGER", "Label": "Desenvolvedor"},

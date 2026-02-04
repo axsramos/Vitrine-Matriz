@@ -152,6 +152,51 @@ class CrudMixin:
         return db.select(sql, params or ())
     
     @classmethod
+    def find_all_List(cls, where: str = None, params: tuple = None, fields: List[str] = None) -> List[Dict]:
+        """
+        Busca registros no banco.
+        :param where: Cláusula WHERE (ex: "id = ?")
+        :param params: Tupla de parâmetros para o WHERE
+        :param fields: Lista de campos específicos para retornar (otimização)
+        """
+        db = Database()
+        
+        # 1. Definição das Colunas (Select * ou Select Campos)
+        if fields:
+            # Filtra apenas campos válidos definidos no Model para segurança
+            valid_fields = cls._get_valid_fields(fields)
+            cols_str = ", ".join(valid_fields)
+        else:
+            cols_str = "*"
+
+        sql = f"SELECT {cols_str} FROM {cls.TABLE_NAME}"
+        
+        # 2. Gestão do Soft Delete (Padrão)
+        # Verifica se o modelo tem campo de auditoria de deleção
+        audit_dlt = cls._get_audit_field_static('AudDlt') 
+        
+        # Constrói o WHERE final
+        final_where = []
+        if audit_dlt:
+            final_where.append(f"{audit_dlt} IS NULL")
+        
+        if where:
+            final_where.append(f"({where})")
+            
+        if final_where:
+            sql += " WHERE " + " AND ".join(final_where)
+
+        # 3. Execução
+        return db.select(sql, params) or []
+
+    # Helper estático necessário para o find_all (caso não tenhas self)
+    @classmethod
+    def _get_audit_field_static(cls, suffix: str):
+        if hasattr(cls, 'FIELDS_AUDIT'):
+            return next((f for f in cls.FIELDS_AUDIT if suffix in f), None)
+        return None
+    
+    @classmethod
     def paginate(cls, page: int = 1, page_size: int = 10, where: str = None, params: tuple = None, fields: List[str] = None) -> Dict[str, Any]:
         """
         Busca registros de forma paginada.

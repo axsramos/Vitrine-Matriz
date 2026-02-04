@@ -1,5 +1,6 @@
 from typing import List, Tuple, Dict, Optional
 from src.models.TaskModel import TaskModel
+from src.models.TaskStatus import TaskStatus
 
 class TaskService:
     
@@ -30,7 +31,7 @@ class TaskService:
         """
         return TaskModel.find_all("TrfRelCod IS NULL")
 
-    def create_task(self, titulo: str, desc: str, tipo: str, prio: str, dev_id: int, rel_id: int = None) -> Tuple[bool, str]:
+    def create_task(self, titulo: str, desc: str, tipo: str, prio: str, dev_id: int, prazo: str) -> Tuple[bool, str]:
         """
         Cria uma nova tarefa.
         Auditoria (Data/Autor) é injetada automaticamente pelo Mixin.
@@ -43,8 +44,9 @@ class TaskService:
                 TrfTip=tipo,
                 TrfPri=prio,
                 TrfDevCod=dev_id,
-                TrfRelCod=rel_id,
-                TrfSit="Aberto"  # Status inicial padrão
+                TrfRelCod=None,
+                TrfSit=TaskStatus.ABERTO,   # Status inicial padrão
+                TrfDatEnt=prazo
             )
             
             # O create() trata o INSERT e auditoria
@@ -77,3 +79,5 @@ class TaskService:
         """
         task = TaskModel(TrfCod=task_id)
         return task.delete()
+    
+    

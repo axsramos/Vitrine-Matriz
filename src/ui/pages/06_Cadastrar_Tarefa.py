@@ -1,4 +1,6 @@
 import streamlit as st
+from datetime import date, datetime
+from src.models.TaskStatus import TaskStatus
 
 # --- CONFIGURAÇÃO E CORE ---
 from src.core.config import Config
@@ -8,11 +10,11 @@ from src.core.auth_middleware import require_auth
 from src.services.task_service import TaskService
 from src.services.dev_service import DevService
 
-# --- METADADOS ---
+# --- METADADOS E ENUMS ---
 from src.models.md.TrfMD import TrfMD
 from src.models.md.DevMD import DevMD
 from src.models.UserRole import UserRole
-from src.models.TaskTip import TaskTip
+from src.models.TaskTip import TaskTip  # <--- NOVA IMPORTAÇÃO
 
 # Configuração da Página
 st.set_page_config(
@@ -24,32 +26,27 @@ st.set_page_config(
 require_auth(allowed_roles=[UserRole.USER, UserRole.MANAGER, UserRole.ADMIN, UserRole.DEVELOPMENT])
 
 st.title("📝 Gestão de Tarefas")
-st.write("Crie novas demandas e gerencie suas pendências.")
+st.write("Crie novas demandas e gerencie o fluxo de trabalho.")
 
 # Instância dos Serviços
 task_service = TaskService()
 dev_service = DevService()
 
-# --- CARREGAMENTO DE DADOS ---
-# 1. Busca dicionário {Nome: ID} para o dropdown
+# --- CARREGAMENTO DE DADOS INICIAIS ---
 dev_options = dev_service.get_dev_options()
-
 if not dev_options:
     st.warning("⚠️ Nenhum desenvolvedor cadastrado. Contate o administrador.")
     st.stop()
 
-# 2. Identifica o Dev ID do usuário logado (se houver)
+# Identifica usuário atual para pré-seleção no combo de Devs
 current_user_id = st.session_state['user']['UsrCod']
 current_dev_id = None
 current_dev_name_index = 0
 
-# Precisamos iterar para achar qual Dev corresponde ao UsrCod atual
-# (Poderíamos ter um método específico no service, mas vamos iterar a lista completa que é leve)
-all_devs_data = dev_service.get_portfolio_data() #get_all_devs()
+all_devs_data = dev_service.get_all_devs()
 for dev in all_devs_data:
     if dev.get('DevUsrCod') == current_user_id:
         current_dev_id = dev['DevCod']
-        # Acha o índice no dict de opções para setar valor padrão no selectbox
         try:
             nomes_lista = list(dev_options.keys())
             current_dev_name_index = nomes_lista.index(dev['DevNom'])
@@ -57,131 +54,210 @@ for dev in all_devs_data:
             pass
         break
 
-st.divider()
+# --- ESTRUTURA DE ABAS ---
+tab_nova, tab_minhas, tab_todas = st.tabs([
+    "➕ Nova Tarefa", 
+    "👤 Minhas Pendências", 
+    "🌎 Visão Geral"
+])
 
-# --- FORMULÁRIO DE CADASTRO ---
-st.subheader("➕ Nova Tarefa")
-
-with st.form("form_tarefa", clear_on_submit=True):
-    c1, c2 = st.columns([2, 1])
+# ==============================================================================
+# ABA 1: NOVA TAREFA (FORMULÁRIO)
+# ==============================================================================
+with tab_nova:
+    st.subheader("Cadastrar Atividade")
     
-    with c1:
-        # Título
-        lbl_tit = TrfMD.FIELDS_MD['TrfTit']['Label']
-        req_tit = TrfMD.FIELDS_MD['TrfTit']['Required']
-        new_tit = st.text_input(f"{lbl_tit} {'*' if req_tit else ''}", placeholder="Resumo da atividade")
+    with st.form("form_tarefa", clear_on_submit=True):
+        c1, c2 = st.columns([2, 1])
         
-        # Descrição
-        lbl_dsc = TrfMD.FIELDS_MD['TrfDsc']['Label']
-        new_dsc = st.text_area(lbl_dsc, height=100, placeholder="Detalhes técnicos...")
+        with c1:
+            # Título
+            lbl_tit = TrfMD.FIELDS_MD['TrfTit']['Label']
+            new_tit = st.text_input(f"{lbl_tit} *", placeholder="Resumo da atividade")
+            
+            # Descrição
+            lbl_dsc = TrfMD.FIELDS_MD['TrfDsc']['Label']
+            new_dsc = st.text_area(lbl_dsc, height=120, placeholder="Detalhes técnicos...")
 
-    with c2:
-        # Responsável (Dropdown)
-        lbl_dev = DevMD.FIELDS_MD['DevNom']['Label']
-        selected_dev_name = st.selectbox(
-            f"{lbl_dev} *", 
-            options=dev_options.keys(),
-            index=current_dev_name_index
+        with c2:
+            # Responsável
+            lbl_dev = DevMD.FIELDS_MD['DevNom']['Label']
+            selected_dev_name = st.selectbox(f"{lbl_dev} *", options=dev_options.keys(), index=current_dev_name_index)
+            
+            # Prazo
+            lbl_prz = TrfMD.FIELDS_MD['TrfDatEnt']['Label']
+            new_prazo = st.date_input(lbl_prz, value=None, min_value=date.today())
+            
+            # Metadados Extras (Tipo e Prioridade)
+            c2a, c2b = st.columns(2)
+            with c2a:
+                # TIPO DE TAREFA (Usando Enum TaskTip)
+                lbl_tip = TrfMD.FIELDS_MD['TrfTip']['Label']
+                # Obtém a lista dinâmica da classe TaskTip (Feature, Bugfix, etc.)
+                new_tip = st.selectbox(lbl_tip, options=TaskTip.list()) 
+                
+            with c2b:
+                # PRIORIDADE
+                lbl_pri = TrfMD.FIELDS_MD['TrfPri']['Label']
+                prios = ["Baixa", "Média", "Alta", "Crítica"]
+                new_pri = st.select_slider(lbl_pri, options=prios, value="Média")
+
+        # Ação
+        submitted = st.form_submit_button("🚀 Cadastrar Tarefa", type="primary", use_container_width=True)
+
+        if submitted:
+            if not new_tit:
+                st.error("O título da tarefa é obrigatório.")
+            else:
+                dev_id_selecionado = dev_options[selected_dev_name]
+                prazo_str = new_prazo.strftime('%Y-%m-%d') if new_prazo else None
+                
+                success, msg = task_service.create_task(
+                    titulo=new_tit,
+                    desc=new_dsc,
+                    tipo=new_tip, # Passando o valor do Enum selecionado
+                    prio=new_pri,
+                    dev_id=dev_id_selecionado,
+                    prazo=prazo_str
+                )
+                
+                if success:
+                    st.toast(msg, icon="✅")
+                    # Hack para atualizar visualmente as outras abas sem perder o toast
+                    # st.rerun() 
+                else:
+                    st.error(msg)
+
+# ==============================================================================
+# ABA 2: MINHAS PENDÊNCIAS (INTERATIVO)
+# ==============================================================================
+with tab_minhas:
+    if current_dev_id:
+        st.subheader(f"Lista de Trabalho: {st.session_state['user']['UsrNom']}")
+        
+        # Busca tarefas não concluídas do Dev logado
+        my_tasks = task_service.get_detailed_tasks(
+            where="t.TrfDevCod = ? AND t.TrfSit != ?", 
+            params=(current_dev_id, TaskStatus.CONCLUIDO)
         )
         
-        # Tipo de Tarefa ("Feature", "Bugfix", "Refactor", "Documentation", "Support")
-        lbl_tip = TrfMD.FIELDS_MD['TrfTip']['Label']
-        tipos_disponiveis = TaskTip.list()
-        new_tip = st.selectbox(lbl_tip, options=tipos_disponiveis)
-        
-        # Prioridade
-        lbl_pri = TrfMD.FIELDS_MD['TrfPri']['Label']
-        pri_disponiveis = ["Baixa", "Média", "Alta", "Crítica"]
-        new_pri = st.select_slider(lbl_pri, options=pri_disponiveis, value="Média")
-
-    # Botão de Envio
-    submitted = st.form_submit_button("🚀 Cadastrar Tarefa", type="primary", use_container_width=True)
-
-    if submitted:
-        if not new_tit:
-            st.error("O título da tarefa é obrigatório.")
+        if not my_tasks:
+            st.info("Você não possui tarefas pendentes. 🎉")
         else:
-            # Recupera ID do dev selecionado
-            dev_id_selecionado = dev_options[selected_dev_name]
-            
-            success, msg = task_service.create_task(
-                titulo=new_tit,
-                desc=new_dsc,
-                tipo=new_tip,
-                prio=new_pri,
-                dev_id=dev_id_selecionado
+            # Prepara dados para DataEditor
+            display_list = []
+            for t in my_tasks:
+                
+                # Conversão de Data (String -> Objeto) para evitar erro no editor
+                prazo_obj = None
+                raw_date = t.get('TrfDatEnt')
+                if raw_date and raw_date != "-":
+                    try:
+                        prazo_obj = datetime.strptime(str(raw_date), "%Y-%m-%d").date()
+                    except ValueError:
+                        prazo_obj = None
+
+                display_list.append({
+                    "Selecionar": False, # MUDANÇA: Nome genérico para aceitar múltiplas ações
+                    "ID": t['TrfCod'],
+                    TrfMD.FIELDS_MD['TrfTit']['Label']: t['TrfTit'],
+                    TrfMD.FIELDS_MD['TrfTip']['Label']: t['TrfTip'],
+                    TrfMD.FIELDS_MD['TrfPri']['Label']: t['TrfPri'],
+                    TrfMD.FIELDS_MD['TrfSit']['Label']: t['TrfSit'],
+                    TrfMD.FIELDS_MD['TrfDatEnt']['Label']: prazo_obj 
+                })
+                
+            # Exibe Tabela Editável
+            edited_data = st.data_editor(
+                display_list,
+                column_config={
+                    "Selecionar": st.column_config.CheckboxColumn("Ação", width="small"), # Checkbox
+                    "ID": st.column_config.NumberColumn(width="small"),
+                    TrfMD.FIELDS_MD['TrfDatEnt']['Label']: st.column_config.DateColumn("Prazo", format="DD/MM/YYYY")
+                },
+                disabled=["ID", TrfMD.FIELDS_MD['TrfTit']['Label'], TrfMD.FIELDS_MD['TrfTip']['Label'], TrfMD.FIELDS_MD['TrfPri']['Label'], TrfMD.FIELDS_MD['TrfSit']['Label'], TrfMD.FIELDS_MD['TrfDatEnt']['Label']],
+                hide_index=True,
+                use_container_width=True,
+                key="editor_my_tasks"
             )
             
-            if success:
-                st.success(msg)
-                # st.rerun() # Opcional: Recarregar para limpar form visualmente se clear_on_submit falhar em versões antigas
-            else:
-                st.error(msg)
+            # --- ÁREA DE AÇÃO (BOTÕES) ---
+            # Identifica quais IDs foram marcados
+            selected_ids = [row['ID'] for row in edited_data if row['Selecionar']]
+            
+            if selected_ids:
+                st.markdown("### Ações em Lote")
+                c_btn1, c_btn2, _ = st.columns([1.5, 1.5, 4])
+                
+                # BOTÃO 1: CONCLUIR
+                with c_btn1:
+                    if st.button(f"🏁 Concluir ({len(selected_ids)})", type="primary", use_container_width=True):
+                        success_count = 0
+                        for t_id in selected_ids:
+                            if task_service.update_task_status(t_id, 'Concluído'):
+                                print('%1 - %2'.format(t_id, TaskStatus.CONCLUIDO))
+                                success_count += 1
+                        
+                        if success_count > 0:
+                            st.toast(f"{success_count} tarefas concluídas!", icon="✅")
+                            st.rerun()
 
-st.divider()
+                # BOTÃO 2: EXCLUIR
+                with c_btn2:
+                    # Usamos um botão normal (secondary) para delete, ou type="primary" se quiser destaque
+                    if st.button(f"🗑️ Excluir ({len(selected_ids)})", use_container_width=True):
+                        del_count = 0
+                        for t_id in selected_ids:
+                            if task_service.delete_task(t_id):
+                                del_count += 1
+                        
+                        if del_count > 0:
+                            st.toast(f"{del_count} tarefas removidas.", icon="🗑️")
+                            st.rerun()
 
-# --- LISTAGEM: MINHAS TAREFAS PENDENTES ---
-# Se o usuário for um Dev, mostramos as tarefas dele. Se for Admin, mostra tudo ou filtra.
-# Aqui assumimos a visão "Minhas Tarefas" baseada no usuário logado.
-
-if current_dev_id:
-    st.subheader(f"📋 Pendências de {st.session_state['user']['UsrNom']}")
-    
-    # Busca tarefas detalhadas (com JOIN para exibir nomes se precisasse, mas aqui o foco é a ação)
-    # Filtro: Pertence ao Dev E Status não é Concluído
-    my_tasks = task_service.get_detailed_tasks(
-        where="t.TrfDevCod = ? AND t.TrfStt != 'Concluído'", 
-        params=(current_dev_id,)
-    )
-    
-    if not my_tasks:
-        st.info("Você não possui tarefas pendentes. Bom trabalho! 🎉")
     else:
-        # Prepara dados para o Data Editor (Adiciona coluna de checkbox)
-        display_list = []
-        for t in my_tasks:
-            display_list.append({
-                "Concluir": False, # Checkbox inicial
+        st.info("Seu usuário não está vinculado a um perfil de Desenvolvedor.")
+
+# ==============================================================================
+# ABA 3: VISÃO GERAL (TODAS AS TAREFAS)
+# ==============================================================================
+with tab_todas:
+    st.subheader("📋 Backlog Geral")
+    
+    # Filtro
+    c_filtro1, _ = st.columns([1, 4])
+    with c_filtro1:
+        show_closed = st.toggle("Mostrar tarefas concluídas", value=False)
+    
+    where_clause = None if show_closed else "t.TrfSit != '{}'".format(TaskStatus.CONCLUIDO)
+    
+    all_tasks = task_service.get_detailed_tasks(where=where_clause)
+    
+    if not all_tasks:
+        st.info("Nenhuma tarefa encontrada.")
+    else:
+        view_data = []
+        for t in all_tasks:
+            view_data.append({
                 "ID": t['TrfCod'],
                 TrfMD.FIELDS_MD['TrfTit']['Label']: t['TrfTit'],
+                "Responsável": t.get('NomeDesenvolvedor', '-'),
+                TrfMD.FIELDS_MD['TrfTip']['Label']: t['TrfTip'], # Tipo também na visão geral
                 TrfMD.FIELDS_MD['TrfPri']['Label']: t['TrfPri'],
-                TrfMD.FIELDS_MD['TrfTip']['Label']: t['TrfTip']
+                "Status": t['TrfSit'],
+                "Entrega": t.get('TrfDatEnt')
             })
             
-        # Editor de Dados Interativo
-        edited_data = st.data_editor(
-            display_list,
-            column_config={
-                "Concluir": st.column_config.CheckboxColumn(
-                    "Ação",
-                    help="Marque para finalizar a tarefa",
-                    default=False,
-                ),
-                "ID": st.column_config.NumberColumn(width="small"),
-            },
-            disabled=["ID", TrfMD.FIELDS_MD['TrfTit']['Label'], TrfMD.FIELDS_MD['TrfPri']['Label'], TrfMD.FIELDS_MD['TrfTip']['Label']],
-            hide_index=True,
+        st.dataframe(
+            view_data,
             use_container_width=True,
-            key="editor_tasks"
+            hide_index=True,
+            column_config={
+                "Status": st.column_config.TextColumn(
+                    "Situação",
+                    help="Status atual",
+                    validate="^(Aberto|Concluído)$"
+                ),
+                "Entrega": st.column_config.DateColumn("Prazo", format="DD/MM/YYYY")
+            }
         )
-        
-        # Lógica de Processamento em Lote
-        # Verifica quais linhas foram marcadas como True
-        tasks_to_close = [row['ID'] for row in edited_data if row['Concluir']]
-        
-        if tasks_to_close:
-            col_btn, _ = st.columns([1, 4])
-            if col_btn.button(f"🏁 Finalizar {len(tasks_to_close)} Selecionada(s)", type="primary"):
-                success_count = 0
-                for t_id in tasks_to_close:
-                    if task_service.update_task_status(t_id, "Concluído"):
-                        success_count += 1
-                
-                if success_count > 0:
-                    st.toast(f"{success_count} tarefa(s) concluída(s) com sucesso!", icon="✅")
-                    st.rerun()
-
-else:
-    # Caso o usuário logado não seja um desenvolvedor cadastrado
-    st.info("Seu usuário não está vinculado a um perfil de Desenvolvedor, por isso a lista de 'Minhas Tarefas' está vazia.")
-    st.caption("Utilize o formulário acima para delegar tarefas a outros desenvolvedores.")

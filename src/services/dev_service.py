@@ -5,7 +5,22 @@ from src.services.user_service import UserService
 from src.models.UserRole import UserRole
 
 class DevService:
+    
+    def get_all_devs(self) -> List[Dict]:
+        """
+        Retorna a lista completa de desenvolvedores com todos os campos (incluindo DevUsrCod).
+        Usado para identificar se o usuário logado é um Dev.
+        """
+        return DevModel.find_all(fields=['DevCod', 'DevNom', 'DevUsrCod'])
 
+    def get_dev_options(self) -> Dict[str, int]:
+        """
+        Retorna dicionário {Nome: ID} para popular selectboxes.
+        """
+        # Busca apenas campos necessários via Mixin
+        devs = DevModel.find_all(fields=["DevCod", "DevNom"])
+        return {d["DevNom"]: d["DevCod"] for d in devs}
+    
     def get_portfolio_data(self) -> List[Dict]:
         """
         Retorna dados consolidados de Desenvolvedores + Perfil.
@@ -28,15 +43,7 @@ class DevService:
         sql = sql.replace("ORDER BY", "WHERE d.DevAudDlt IS NULL ORDER BY")
         
         return db.select(sql)
-
-    def get_dev_options(self) -> Dict[str, int]:
-        """
-        Retorna dicionário {Nome: ID} para popular selectboxes.
-        """
-        # Busca apenas campos necessários via Mixin
-        devs = DevModel.find_all(fields=["DevCod", "DevNom"])
-        return {d["DevNom"]: d["DevCod"] for d in devs}
-
+    
     def check_if_user_is_dev(self, user_id: int) -> bool:
         """Verifica se um Usuário do sistema já é um Desenvolvedor."""
         # Filtra pelo campo da FK de usuário (DevUsrCod)

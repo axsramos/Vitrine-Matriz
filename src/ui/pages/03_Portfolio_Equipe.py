@@ -36,53 +36,49 @@ equipe = dev_service.get_portfolio_data()
 if not equipe:
     st.info("Nenhum portfólio registrado no momento.")
 else:
-    # Centralização Visual (Layout: Margem | Conteúdo | Margem)
-    _, col_central, _ = st.columns([2, 8, 2])
-
-    with col_central:
-        for dev in equipe:
-            # Container isolado para cada membro
-            with st.container(border=True):
-                
-                # Divisão interna: Foto (1) vs Informações (2)
-                col_img, col_txt = st.columns([1, 3])
-                
-                # --- FOTO DO PERFIL ---
-                with col_img:
-                    # Tenta carregar foto do perfil, senão usa avatar padrão
-                    foto_blob = dev.get('UsrPrfFto') 
-                    img = load_avatar(foto_blob) 
-                    st.image(img, use_container_width=True)
-                
-                # --- INFORMAÇÕES TEXTUAIS ---
-                with col_txt:
-                    # Nome (Vindo de T_Dev)
-                    lbl_nome = DevMD.FIELDS_MD['DevNom']['Label']
-                    nome = dev.get('DevNom', 'Desenvolvedor')
-                    st.subheader(nome)
-                    
-                    # Cargo (Vindo de T_UsrPrf)
-                    cargo = dev.get('UsrPrfCgo')
-                    if cargo:
-                        st.caption(f"**{cargo}**")
-                    
-                    # Bio (Vindo de T_UsrPrf)
-                    # lbl_bio = UsrPrfMD.FIELDS_MD['UsrPrfBio']['Label'] # Opcional usar o label
-                    bio = dev.get('UsrPrfBio') or "Perfil técnico focado em soluções tecnológicas."
-                    st.write(bio)
-                    
-                    # Link/Portfólio
-                    link = dev.get('UsrPrfUrl')
-                    lbl_link = UsrPrfMD.FIELDS_MD['UsrPrfUrl']['Label']
-                    
-                    st.markdown("---")
-                    
-                    if link:
-                        # Garante protocolo http/https para o botão funcionar
-                        url_final = link if link.startswith(('http://', 'https://')) else f"https://{link}"
-                        st.link_button(f"🔗 {lbl_link}", url_final, use_container_width=True)
-                    else:
-                        st.caption("🌐 Link profissional não informado.")
+    for dev in equipe:
+        # Container isolado para cada membro
+        with st.container(border=True):
             
-            # Espaçamento entre cards
-            st.write("")
+            # Divisão interna: Foto (1) vs Informações (2)
+            col_img, col_txt = st.columns([1, 3])
+            
+            # --- FOTO DO PERFIL ---
+            with col_img:
+                # Tenta carregar foto do perfil, senão usa avatar padrão
+                foto_blob = dev.get('UsrPrfFto') 
+                img = load_avatar(foto_blob) 
+                st.image(img, use_container_width=True)
+            
+            # --- INFORMAÇÕES TEXTUAIS ---
+            with col_txt:
+                # Nome (Vindo de T_Dev)
+                lbl_nome = DevMD.FIELDS_MD['DevNom']['Label']
+                nome = dev.get('DevNom', 'Desenvolvedor')
+                st.subheader(nome)
+                
+                # Cargo (Vindo de T_UsrPrf)
+                cargo = dev.get('UsrPrfCgo')
+                if cargo:
+                    st.caption(f"**{cargo}**")
+                
+                # Bio (Vindo de T_UsrPrf)
+                # lbl_bio = UsrPrfMD.FIELDS_MD['UsrPrfBio']['Label'] # Opcional usar o label
+                bio = dev.get('UsrPrfBio') or "Perfil técnico focado em soluções tecnológicas."
+                st.write(bio)
+                
+                # Link/Portfólio
+                link = dev.get('UsrPrfUrl')
+                lbl_link = UsrPrfMD.FIELDS_MD['UsrPrfUrl']['Label']
+                
+                st.markdown("---")
+                
+                if link:
+                    # Garante protocolo http/https para o botão funcionar
+                    url_final = link if link.startswith(('http://', 'https://')) else f"https://{link}"
+                    st.link_button(f"🔗 {lbl_link}", url_final, use_container_width=True)
+                else:
+                    st.caption("🌐 Link profissional não informado.")
+        
+        # Espaçamento entre cards
+        st.write("")

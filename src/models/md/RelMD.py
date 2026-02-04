@@ -8,7 +8,7 @@ class RelMD:
     FIELDS_AUDIT = ["RelAudIns", "RelAudUpd", "RelAudDlt", "RelAudUsr"]
 
     FIELDS = [
-        "RelCod", "RelVrs", "RelTtlCmm", "RelDat",
+        "RelCod", "RelVrs", "RelTit", "RelDat",
         "RelAudIns", "RelAudUpd", "RelAudDlt", "RelAudUsr"
     ]
     
@@ -16,7 +16,7 @@ class RelMD:
         "RelCod": {"Type": "INTEGER", "Label": "ID"},
         "RelVrs": {"Type": "VARCHAR", "Label": "Versão", "Required": True},
         "RelSit": {"Type": "VARCHAR", "Label": "Situação", "Required": False},
-        "RelTtlCmm": {"Type": "VARCHAR", "Label": "Título/Comentário"},
+        "RelTit": {"Type": "VARCHAR", "Label": "Título"},
         "RelDat": {"Type": "DATE", "Label": "Data Publicação"},
         
         "RelAudIns": AudMD.FIELDS_MD["AudIns"],
