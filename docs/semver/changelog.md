@@ -35,6 +35,28 @@ Segurança: Em caso de vulnerabilidades.
 
 ---
 
+## [0.6.0] - 04/02/2026
+### Refatoração Core, Segurança e Performance
+#### Adicionado:
+- **Nova Landing Page:** Tela inicial ("Home") com design limpo, logomarca e atalhos rápidos.
+- **Ciclo de Vida de Release:** Implementação do status de Release (`RelSit`) para diferenciar versões em planejamento de versões publicadas.
+- **UX em Tarefas:** Tela "Cadastrar Tarefa" redesenhada com Abas (Nova, Pendências, Visão Geral) e ações em lote (Concluir/Excluir).
+- **Tipagem de Tarefas:** Introdução do Enum `TaskTip` para padronizar tipos (Feature, Bugfix, Refactor, etc.).
+
+#### Modificado:
+- **Arquitetura Core:** Remoção completa da dependência do **Pandas** nas camadas de Serviço e Modelo. O sistema agora trafega listas de dicionários nativos (maior performance e menor consumo de memória).
+- **Navegação Dinâmica:** Menu lateral reconstruído (`navigation.py`) para renderizar opções baseadas estritamente nas permissões do usuário (`UserRole`).
+- **Dashboard:** Gráficos Altair reescritos para aceitar dados nativos com tipagem explícita (:N, :Q).
+- **CRUD Inteligente:** Otimização no `CrudMixin` para permitir seleção granular de colunas (`fields=[...]`) e padrão "Read-Modify-Write" para atualizações seguras.
+
+#### Segurança:
+- **Criptografia de Senhas:** Implementação da biblioteca **bcrypt** para hashing seguro de senhas no banco de dados.
+- **Seeds Seguras:** Scripts de população de banco atualizados para gerar hashes compatíveis automaticamente.
+
+#### Corrigido:
+- Erro de integridade ao atualizar status de tarefas (`TrfStt`) que zerava campos obrigatórios.
+- Conflito de tipagem de datas no editor de tabelas (`st.data_editor`).
+
 ## [0.5.0](./v0.5.0/whatsnew.md) - 27/01/2026
 ### Central de Relatórios e Estabilização de Interface
 #### Adicionado:
