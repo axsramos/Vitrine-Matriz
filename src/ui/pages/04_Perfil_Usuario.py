@@ -89,5 +89,6 @@ with col_form:
             if success:
                 st.success(msg)
                 # Opcional: st.rerun() para atualizar a foto imediatamente
+                st.rerun()
             else:
                 st.error(msg)

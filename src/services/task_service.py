@@ -61,15 +61,46 @@ class TaskService:
     def update_task_status(self, task_id: int, new_status: str) -> bool:
         """
         Atualiza apenas o status da tarefa.
-        Substitui a query manual UPDATE T_Trf...
+        Carrega os dados atuais antes para evitar sobrescrever campos obrigatórios (como Título) com NULL.
         """
-        # Instancia apenas com PK e o campo a alterar
-        task = TaskModel(TrfCod=task_id, TrfSit=new_status)
+        # 1. Busca a tarefa atual no banco
+        # Precisamos dos dados completos para preencher o objeto Model
+        current_data_list = TaskModel.find_all(where="TrfCod = ?", params=(task_id,))
+        
+        if not current_data_list:
+            return False # Tarefa não encontrada
+            
+        current_data = current_data_list[0]
+        
+        # 2. Instancia o Model com os dados existentes (Preserva Título, Descrição, etc.)
+        task = TaskModel(**current_data)
+        
+        # 3. Aplica a alteração pontual
+        task.TrfSit = new_status
+        
+        # 4. Executa o Update
         return task.update()
 
     def assign_release(self, task_id: int, rel_id: int) -> bool:
-        """Vincula uma tarefa a uma release."""
-        task = TaskModel(TrfCod=task_id, TrfRelCod=rel_id)
+        """
+        Vincula uma tarefa a uma release.
+        Carrega os dados atuais antes para evitar sobrescrever campos obrigatórios com NULL.
+        """
+        # 1. Busca a tarefa atual para garantir integridade
+        current_data_list = TaskModel.find_all(where="TrfCod = ?", params=(task_id,))
+        
+        if not current_data_list:
+            return False # Tarefa não encontrada
+            
+        current_data = current_data_list[0]
+        
+        # 2. Instancia o objeto completo
+        task = TaskModel(**current_data)
+        
+        # 3. Aplica a alteração (Vincula a Release)
+        task.TrfRelCod = rel_id
+        
+        # 4. Salva
         return task.update()
 
     def delete_task(self, task_id: int) -> bool:

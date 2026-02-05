@@ -10,6 +10,7 @@ from src.models.md.RelMD import RelMD
 from src.models.md.TrfMD import TrfMD
 from src.models.md.DevMD import DevMD
 from src.models.UserRole import UserRole
+from src.models.TaskStatus import TaskStatus
 
 # Configuração da Página
 st.set_page_config(
@@ -39,7 +40,9 @@ st.divider()
 # Busca tarefas que estão CONCLUÍDAS mas ainda SEM RELEASE
 # Usamos o método get_detailed_tasks para ter o JOIN com Dev e Release
 pending_tasks = task_service.get_detailed_tasks(
-    where="t.TrfStt = 'Concluído' AND t.TrfRelCod IS NULL"
+    where="t.TrfSit = ? AND t.TrfRelCod IS NULL",
+    params=(TaskStatus.CONCLUIDO.value,)
+    
 )
 
 if not pending_tasks:
@@ -92,10 +95,6 @@ else:
         req_tit = RelMD.FIELDS_MD['RelTit']['Required']
         titulo_input = st.text_input(f"{lbl_tit} {'*' if req_tit else ''}", placeholder="Ex: Atualização de Segurança")
         
-        # Campo DESCRIÇÃO (Opcional)
-        lbl_dsc = RelMD.FIELDS_MD['RelDsc']['Label']
-        desc_input = st.text_area(lbl_dsc, height=100)
-
         # Botão de Ação
         submitted = st.form_submit_button("🚀 Publicar Release", type="primary", use_container_width=True)
 
@@ -108,8 +107,7 @@ else:
                 success, msg = rel_service.create_release(
                     titulo=titulo_input,
                     versao=versao_input,
-                    data_publicacao=data_input.strftime('%Y-%m-%d'),
-                    desc=desc_input
+                    data_publicacao=data_input.strftime('%Y-%m-%d')
                 )
                 
                 if success:

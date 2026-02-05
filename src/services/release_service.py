@@ -33,7 +33,7 @@ class ReleaseService:
         res = ReleaseModel.find_all("RelVrs = ?", (version,))
         return res[0] if res else None
 
-    def create_release(self, titulo: str, versao: str, data_publicacao: str, desc: str) -> Tuple[bool, str]:
+    def create_release(self, titulo: str, versao: str, data_publicacao: str) -> Tuple[bool, str]:
         """
         Cria nova release.
         Valida unicidade da versão e delega persistência ao Modelo.
@@ -48,7 +48,6 @@ class ReleaseService:
                 RelTit=titulo,
                 RelVrs=versao,
                 RelDat=data_publicacao,
-                RelDsc=desc,
                 RelSit=ReleaseStatus.FECHADO
             )
 
@@ -132,10 +131,10 @@ class ReleaseService:
                 titulo_sanitizado = self._sanitize_text(f"v{item['RelVrs']} - {item.get('RelTit', '')}")
                 pdf.cell(0, 8, titulo_sanitizado, ln=True)
                 
-                pdf.set_font("Arial", "", 9)
-                desc_sanitizada = self._sanitize_text(item.get('RelDsc', ''))
-                pdf.multi_cell(0, 5, desc_sanitizada)
-                pdf.ln(2)
+                # pdf.set_font("Arial", "", 9)
+                # desc_sanitizada = self._sanitize_text(item.get('RelDsc', ''))
+                # pdf.multi_cell(0, 5, desc_sanitizada)
+                # pdf.ln(2)
 
         try:
             return bytes(pdf.output(dest='S'))

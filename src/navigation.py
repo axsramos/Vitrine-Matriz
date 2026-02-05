@@ -17,7 +17,8 @@ def get_navigation():
     # --- SEÇÃO 1: PÚBLICO / GERAL (Visível para todos ou Auth opcional) ---
     # Nota: Dashboard e Notas geralmente são públicos ou a landing page
     pages["Visão Geral"] = [
-        st.Page("src/ui/pages/01_Dashboard.py", title="Painel de Controle", icon="🏠", default=True),
+        st.Page("src/ui/pages/00_Home.py", title="Início", icon="🏠", default=True),
+        st.Page("src/ui/pages/01_Dashboard.py", title="Painel de Controle", icon="🏠"),
         st.Page("src/ui/pages/02_Notas_de_Versao.py", title="Notas de Versão", icon="📜"),
         st.Page("src/ui/pages/03_Portfolio_Equipe.py", title="Time de Devs", icon="👥"),
     ]

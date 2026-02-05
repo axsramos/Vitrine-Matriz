@@ -16,7 +16,7 @@ class RelMD:
         "RelCod": {"Type": "INTEGER", "Label": "ID"},
         "RelVrs": {"Type": "VARCHAR", "Label": "Versão", "Required": True},
         "RelSit": {"Type": "VARCHAR", "Label": "Situação", "Required": False},
-        "RelTit": {"Type": "VARCHAR", "Label": "Título"},
+        "RelTit": {"Type": "VARCHAR", "Label": "Título", "Required": False},
         "RelDat": {"Type": "DATE", "Label": "Data Publicação"},
         
         "RelAudIns": AudMD.FIELDS_MD["AudIns"],
